@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Login - Attendance Portal</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+	<style>
+		:root {
+			--ink: #0c1b2a;
+			--muted: #5c6b76;
+			--surface: #ffffff;
+			--accent: #f4a03a;
+			--accent-strong: #f06d3f;
+			--teal: #1f8a84;
+			--teal-strong: #0f6a64;
+			--line: #e0e7ee;
+			--shadow: 0 18px 50px rgba(12, 27, 42, 0.12);
+		}
+		* {
+			box-sizing: border-box;
+		}
+		body {
+			font-family: "Rubik", "Space Grotesk", sans-serif;
+			color: var(--ink);
+			margin: 0;
+			min-height: 100vh;
+			background:
+				radial-gradient(circle at 10% 20%, rgba(244, 160, 58, 0.18), transparent 55%),
+				radial-gradient(circle at 90% 10%, rgba(31, 138, 132, 0.18), transparent 50%),
+				linear-gradient(135deg, #f7fbff 0%, #f0f8f5 45%, #fff4ea 100%);
+			padding: 28px 18px 60px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+		.shell {
+			max-width: 600px;
+			width: 100%;
+		}
+		.hero {
+			background: var(--surface);
+			border-radius: 22px;
+			padding: 26px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 20px;
+			box-shadow: var(--shadow);
+			border: 1px solid rgba(12, 27, 42, 0.06);
+			text-align: center;
+			margin-bottom: 22px;
+		}
+		.hero img {
+			width: 80px;
+			height: 80px;
+			border-radius: 18px;
+			object-fit: contain;
+			background: #f7f9fb;
+			padding: 12px;
+		}
+		.hero h1 {
+			margin: 0;
+			font-size: 1.3rem;
+			font-weight: 700;
+		}
+		.hero p {
+			margin: 8px 0 0;
+			font-size: 0.95rem;
+			color: var(--muted);
+		}
+		.hero-tag {
+			font-family: "Space Grotesk", sans-serif;
+			font-weight: 600;
+			padding: 10px 14px;
+			border-radius: 999px;
+			background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+			color: #ffffff;
+			letter-spacing: 0.4px;
+			text-transform: uppercase;
+			font-size: 0.8rem;
+			white-space: nowrap;
+		}
+		.card {
+			background: var(--surface);
+			border-radius: 20px;
+			padding: 26px;
+			box-shadow: var(--shadow);
+			border: 1px solid rgba(12, 27, 42, 0.06);
+		}
+		.card h2 {
+			margin: 0 0 20px;
+			font-size: 1.2rem;
+			font-weight: 700;
+			text-align: center;
+		}
+		.form-group {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			margin-bottom: 16px;
+		}
+		.form-group label {
+			font-size: 0.9rem;
+			font-weight: 600;
+			color: var(--muted);
+		}
+		.form-group input {
+			padding: 12px 14px;
+			border: 1px solid var(--line);
+			border-radius: 12px;
+			font-size: 1rem;
+			background: #fdfdfd;
+			color: var(--ink);
+		}
+		.form-group input:focus {
+			outline: none;
+			border-color: var(--teal);
+			background: #ffffff;
+		}
+		.btn {
+			padding: 14px 20px;
+			border: none;
+			border-radius: 14px;
+			font-size: 1rem;
+			font-weight: 600;
+			cursor: pointer;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			text-decoration: none;
+			display: inline-block;
+			text-align: center;
+			width: 100%;
+		}
+		.btn-primary {
+			background: linear-gradient(135deg, var(--teal) 0%, var(--teal-strong) 100%);
+			color: #ffffff;
+			box-shadow: 0 12px 26px rgba(31, 138, 132, 0.25);
+		}
+		.btn-primary:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 14px 30px rgba(31, 138, 132, 0.35);
+		}
+		.back-link {
+			text-align: center;
+			margin-top: 16px;
+		}
+		.back-link a {
+			color: var(--teal);
+			text-decoration: none;
+			font-weight: 600;
+		}
+		.back-link a:hover {
+			text-decoration: underline;
+		}
+		.error {
+			color: #d32f2f;
+			font-size: 0.9rem;
+			margin-top: 8px;
+		}
+		@media (max-width: 768px) {
+			.hero {
+				padding: 20px;
+			}
+			.card {
+				padding: 20px;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="shell">
+		<section class="hero">
+			<img src="{{ url_for('static', filename='/images/logo.png') }}" alt="Logo">
+			<div>
+				<h1>P.T. LEE CHENGALVARAYA NAICKER COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
+				<p>Attendance Management System</p>
+			</div>
+			<div class="hero-tag">Login</div>
+		</section>
+
+		<section class="card">
+			<h2>Administrator Login</h2>
+			<form method="POST" action="/auth/login">
+				<div class="form-group">
+					<label for="username">Username</label>
+					<input type="text" id="username" name="username" placeholder="Enter username" required>
+				</div>
+				<div class="form-group">
+					<label for="password">Password</label>
+					<input type="password" id="password" name="password" placeholder="Enter password" required>
+				</div>
+				{% if error %}
+				<div class="error">{{ error }}</div>
+				{% endif %}
+				<button type="submit" class="btn btn-primary">Login</button>
+			</form>
+			<div class="back-link">
+				<a href="/">Back to Home</a>
+			</div>
+		</section>
+	</div>
+</body>
+</html>

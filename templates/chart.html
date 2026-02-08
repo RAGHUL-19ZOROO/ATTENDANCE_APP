@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Attendance Chart</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin: 20px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        select, button {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #chartContainer {
+            margin-top: 30px;
+            text-align: center;
+        }
+        #chartImage {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .stats {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .stats div {
+            display: inline-block;
+            margin: 0 15px;
+            padding: 10px 20px;
+            border-radius: 4px;
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Student Attendance Chart</h1>
+        
+        <div class="form-group">
+            <label for="studentSelect">Select Student:</label>
+            <select id="studentSelect">
+                <option value="">-- Choose a Student --</option>
+                {% for student in students %}
+                <option value="{{ student.Id }}">{{ student.Id }} - {{ student.Name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <button onclick="loadChart()">Generate Chart</button>
+        
+        <div id="chartContainer" style="display: none;">
+            <h2 id="studentName"></h2>
+            <img id="chartImage" src="" alt="Attendance Chart">
+            <div class="stats" id="stats"></div>
+        </div>
+        
+        <a href="{{ url_for('dashboard') }}" class="back-link">← Back to Dashboard</a>
+    </div>
+
+    <script>
+        function loadChart() {
+            const studentId = document.getElementById('studentSelect').value;
+            
+            if (!studentId) {
+                alert('Please select a student');
+                return;
+            }
+            
+            fetch(`/attendance/chart/${studentId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.ok) {
+                        document.getElementById('studentName').textContent = data.student_name;
+                        document.getElementById('chartImage').src = data.chart_url + '?t=' + new Date().getTime();
+                        
+                        const statsHtml = `
+                            <div style="background-color: #4CAF50; color: white;">
+                                Present: ${data.stats.present}
+                            </div>
+                            <div style="background-color: #F44336; color: white;">
+                                Absent: ${data.stats.absent}
+                            </div>
+                            <div style="background-color: #FF9800; color: white;">
+                                Late: ${data.stats.late}
+                            </div>
+                        `;
+                        document.getElementById('stats').innerHTML = statsHtml;
+                        document.getElementById('chartContainer').style.display = 'block';
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to load chart');
+                });
+        }
+    </script>
+</body>
+</html>

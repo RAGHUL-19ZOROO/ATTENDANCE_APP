@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Attendance Dashboard</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+	<link rel="icon" type="image/png" sizes="32x32" href="logo.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="logo.png">
+	<link rel="apple-touch-icon" sizes="180x180" href="logo.png">
+	<style>
+		:root {
+			--ink: #0c1b2a;
+			--muted: #5c6b76;
+			--surface: #ffffff;
+			--accent: #f4a03a;
+			--accent-strong: #f06d3f;
+			--teal: #1f8a84;
+			--teal-strong: #0f6a64;
+			--line: #e0e7ee;
+			--shadow: 0 18px 50px rgba(12, 27, 42, 0.12);
+		}
+		* {
+			box-sizing: border-box;
+		}
+		body {
+			font-family: "Rubik", "Space Grotesk", sans-serif;
+			color: var(--ink);
+			margin: 0;
+			min-height: 100vh;
+			background:
+				radial-gradient(circle at 10% 20%, rgba(244, 160, 58, 0.18), transparent 55%),
+				radial-gradient(circle at 90% 10%, rgba(31, 138, 132, 0.18), transparent 50%),
+				linear-gradient(135deg, #f7fbff 0%, #f0f8f5 45%, #fff4ea 100%);
+			padding: 28px 18px 60px;
+		}
+		.shell {
+			max-width: 1120px;
+			margin: 0 auto;
+			display: grid;
+			gap: 22px;
+		}
+		.hero {
+			
+			background: transparent;
+			backdrop-filter: blur(55px);
+			
+			border-radius: 22px;
+			padding: 22px 26px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 20px;
+			border: 1px solid rgba(12, 27, 42, 0.06);
+			box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.953);
+		}
+		.hero-left {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+		}
+		.hero img {
+			width: 72px;
+			height: 72px;
+			border-radius: 18px;
+			object-fit: contain;
+			background: #f7f9fb;
+			padding: 10px;
+		}
+		.hero h1 {
+			margin: 0;
+			font-size: 1.4rem;
+			font-weight: 700;
+		}
+		.hero p {
+			margin: 6px 0 0;
+			font-size: 0.95rem;
+			color: var(--muted);
+		}
+		.hero-tag {
+			font-family: "Space Grotesk", sans-serif;
+			font-weight: 600;
+			padding: 10px 14px;
+			border-radius: 999px;
+			background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+			color: #ffffff;
+			letter-spacing: 0.4px;
+			text-transform: uppercase;
+			font-size: 0.8rem;
+			white-space: nowrap;
+		}
+		.filters {
+			background: var(--surface);
+			border-radius: 20px;
+			padding: 18px 20px 8px;
+			box-shadow: var(--shadow);
+			border: 1px solid rgba(12, 27, 42, 0.06);
+		}
+		.filters h3 {
+			margin: 0 0 16px;
+			font-size: 1rem;
+			font-weight: 600;
+		}
+		.controls {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+			gap: 14px;
+			align-items: end;
+		}
+		.control {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+			font-size: 0.85rem;
+			font-weight: 600;
+			color: var(--muted);
+		}
+		.control select,
+		.control input {
+			padding: 10px 12px;
+			border: 1px solid var(--line);
+			border-radius: 12px;
+			font-size: 0.95rem;
+			font-weight: 500;
+			background: #fdfdfd;
+			color: var(--ink);
+		}
+		#updateAllBtn {
+			padding: 12px 18px;
+			border: none;
+			border-radius: 14px;
+			background: linear-gradient(135deg, var(--teal) 0%, var(--teal-strong) 100%);
+			color: #ffffff;
+			font-weight: 600;
+			cursor: pointer;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			box-shadow: 0 12px 26px rgba(31, 138, 132, 0.25);
+		}
+		#updateAllBtn:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 14px 30px rgba(31, 138, 132, 0.35);
+		}
+		.table-card {
+			background: var(--surface);
+			border-radius: 22px;
+			padding: 14px;
+			box-shadow: var(--shadow);
+			border: 1px solid rgba(12, 27, 42, 0.06);
+		}
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			background: transparent;
+		}
+		th, td {
+			padding: 12px 14px;
+			text-align: left;
+			border-bottom: 1px solid var(--line);
+			font-size: 0.95rem;
+		}
+		th {
+			font-weight: 700;
+			letter-spacing: 0.3px;
+			color: var(--muted);
+			text-transform: uppercase;
+			font-size: 0.78rem;
+		}
+		tr:hover td {
+			background: rgba(244, 160, 58, 0.08);
+		}
+		.statusSelect {
+			padding: 8px 10px;
+			border-radius: 10px;
+			border: 1px solid var(--line);
+			font-weight: 600;
+			background: #fff8f1;
+			color: var(--ink);
+		}
+		.locked td {
+			color: var(--muted);
+		}
+		.locked .statusSelect {
+			background: #f2f4f6;
+			color: #8a97a3;
+			border-color: #dde4ea;
+		}
+		.empty {
+			text-align: center;
+			padding: 16px;
+			color: var(--muted);
+		}
+		.logout-btn {
+			padding: 8px 14px;
+			border: none;
+			border-radius: 10px;
+			background: #dc3545;
+			color: #ffffff;
+			font-weight: 600;
+			cursor: pointer;
+			font-size: 0.85rem;
+			text-decoration: none;
+			display: inline-block;
+			transition: background 0.2s ease;
+		}
+		.logout-btn:hover {
+			background: #c82333;
+		}
+		.chart-btn {
+			padding: 12px 18px;
+			border: none;
+			border-radius: 14px;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: #ffffff;
+			font-weight: 600;
+			cursor: pointer;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			box-shadow: 0 12px 26px rgba(102, 126, 234, 0.25);
+			text-decoration: none;
+			display: inline-block;
+			text-align: center;
+		}
+		.chart-btn:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 14px 30px rgba(102, 126, 234, 0.35);
+		}
+		#markAllPresentBtn {
+			padding: 12px 18px;
+			border: none;
+			border-radius: 14px;
+			background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+			color: #ffffff;
+			font-weight: 600;
+			cursor: pointer;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			box-shadow: 0 12px 26px rgba(76, 175, 80, 0.25);
+		}
+		#markAllPresentBtn:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 14px 30px rgba(76, 175, 80, 0.35);
+		}
+		@media (max-width: 768px) {
+			.hero {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+			.hero-tag {
+				align-self: flex-start;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="shell">
+		<section class="hero">
+			<div class="hero-left">
+				<img src="{{ url_for('static', filename='/images/logo.png') }}" alt="Logo">
+				<div>
+					<h1>P.T. LEE CHENGALVARAYA NAICKER COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
+					<p>Attendance Dashboard for daily roll call updates and quick auditing.</p>
+				</div>
+			</div>
+			<div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
+				<div class="hero-tag">Live Attendance</div>
+				<div style="display: flex; gap: 8px;">
+					<a href="{{ url_for('chart_page') }}" class="logout-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"> Charts</a>
+					<a href="/logout" class="logout-btn">Logout</a>
+				</div>
+			</div>
+		</section>
+
+		<section class="filters">
+			<h3>Filter & Update</h3>
+			<div class="controls">
+				<label class="control">
+					Student
+					<select id="studentFilter">
+						<option value="all">All Students</option>
+						{% for student_id in student_ids %}
+						<option value="{{ student_id }}">{{ student_id }}</option>
+						{% endfor %}
+					</select>
+				</label>
+				<label class="control">
+					Status
+					<select id="statusFilter">
+						<option value="all">All Status</option>
+						{% for status in status_options %}
+						<option value="{{ status }}">{{ status }}</option>
+						{% endfor %}
+					</select>
+				</label>
+				<label class="control">
+					ID
+					<input id="idFilter" type="text" placeholder="Filter by ID">
+				</label>
+				<label class="control">
+					Date
+					<input id="dateFilter" type="date">
+				</label>
+				<label class="control">
+					Search
+					<input id="searchFilter" type="text" placeholder="Search any field...">
+				</label>
+				<a href="{{ url_for('chart_page') }}" class="chart-btn"> View Charts</a>
+				<button id="updateAllBtn" type="button">Update All</button>
+				<button id="markAllPresentBtn" type="button">Mark All Present</button>
+			</div>
+		</section>
+
+		<section class="table-card">
+			<table id="attendanceTable">
+				<thead>
+					<tr>
+						<th>ID</th>
+						<th>Name</th>
+						<th>Date</th>
+						<th>Status</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% if attendances and attendances|length > 0 %}
+						{% for row in attendances %}
+						<tr data-student="{{ row.get('Name', '') }}" data-status="{{ row.get('status', '') }}" data-original-status="{{ row.get('status', '') }}" data-id="{{ row.get('Id', '') }}" data-date="{{ row.get('date', row.get('Date', '')) }}">
+							<td>{{ row.get('Id', '') }}</td>
+							<td>{{ row.get('Name', '') }}</td>
+							<td>{{ row.get('date', row.get('Date', '')) }}</td>
+							<td>
+								<select class="statusSelect">
+									{% for status in status_options %}
+									<option value="{{ status }}" {% if row.get('status', '') == status %}selected{% endif %}>{{ status }}</option>
+									{% endfor %}
+								</select>
+							</td>
+						</tr>
+						{% endfor %}
+					{% else %}
+						<tr>
+							<td class="empty" colspan="4">No attendance records found.</td>
+						</tr>
+					{% endif %}
+				</tbody>
+			</table>
+		</section>
+	</div>
+
+	<script>
+		const studentFilter = document.getElementById("studentFilter");
+		const statusFilter = document.getElementById("statusFilter");
+		const idFilter = document.getElementById("idFilter");
+		const dateFilter = document.getElementById("dateFilter");
+		const searchFilter = document.getElementById("searchFilter");
+		const updateAllBtn = document.getElementById("updateAllBtn");
+		const markAllPresentBtn = document.getElementById("markAllPresentBtn");
+		const table = document.getElementById("attendanceTable");
+		const tableBody = table.querySelector("tbody");
+		let rows = Array.from(tableBody.querySelectorAll("tr"));
+
+		const today = new Date();
+		const todayStr = today.toISOString().slice(0, 10);
+		const yesterday = new Date();
+		yesterday.setDate(yesterday.getDate() - 1);
+		const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+		dateFilter.value = todayStr;
+
+		function isUpdatable(dateStr) {
+			return dateStr <= todayStr;
+		}
+
+		function applyFilters() {
+			const selectedStudent = studentFilter.value.toLowerCase();
+			const selectedStatus = statusFilter.value.toLowerCase();
+			const idText = idFilter.value.toLowerCase().trim();
+			const dateText = dateFilter.value.trim();
+			const searchText = searchFilter.value.toLowerCase().trim();
+
+			rows.forEach((row) => {
+				if (row.querySelector(".empty")) {
+					return;
+				}
+				const studentName = (row.dataset.student || "").toLowerCase();
+				const statusValue = (row.dataset.status || "").toLowerCase();
+				const idValue = (row.dataset.id || "").toLowerCase();
+				const dateValue = (row.dataset.date || "").toLowerCase();
+				const rowText = row.innerText.toLowerCase();
+
+				const matchesStudent = selectedStudent === "all" || studentName === selectedStudent;
+				const matchesStatus = selectedStatus === "all" || statusValue === selectedStatus;
+				const matchesId = !idText || idValue.includes(idText);
+				const matchesDate = !dateText || dateValue.startsWith(dateText.toLowerCase());
+				const matchesSearch = !searchText || rowText.includes(searchText);
+
+				row.style.display = matchesStudent && matchesStatus && matchesId && matchesDate && matchesSearch ? "" : "none";
+			});
+		}
+
+		function bindRowEvents(row) {
+			const statusSelect = row.querySelector(".statusSelect");
+			if (!statusSelect) {
+				return;
+			}
+			const rowDate = row.dataset.date || "";
+			if (!isUpdatable(rowDate)) {
+				statusSelect.disabled = true;
+				statusSelect.title = "Updates allowed only for current date and past dates.";
+				row.classList.add("locked");
+			}
+			statusSelect.addEventListener("change", (event) => {
+				row.dataset.status = event.target.value;
+				applyFilters();
+			});
+		}
+
+		function rebuildTable(rowsData) {
+			tableBody.innerHTML = "";
+			if (!rowsData.length) {
+				const emptyRow = document.createElement("tr");
+				emptyRow.innerHTML = '<td class="empty" colspan="4">No attendance records found.</td>';
+				tableBody.appendChild(emptyRow);
+				rows = [emptyRow];
+				return;
+			}
+
+			rowsData.forEach((rowData) => {
+				const row = document.createElement("tr");
+				row.dataset.student = rowData.Name || "";
+				row.dataset.status = rowData.status || "";
+				row.dataset.originalStatus = rowData.status || "";
+				row.dataset.id = rowData.Id || "";
+				row.dataset.date = rowData.date || "";
+
+				const statusOptions = `
+					{% for status in status_options %}
+					<option value="{{ status }}">{{ status }}</option>
+					{% endfor %}
+				`;
+
+				row.innerHTML = `
+					<td>${rowData.Id ?? ""}</td>
+					<td>${rowData.Name ?? ""}</td>
+					<td>${rowData.date ?? ""}</td>
+					<td>
+						<select class="statusSelect">
+							${statusOptions}
+						</select>
+					</td>
+				`;
+
+				const statusSelect = row.querySelector(".statusSelect");
+				statusSelect.value = rowData.status || "present";
+				tableBody.appendChild(row);
+				bindRowEvents(row);
+			});
+
+			rows = Array.from(tableBody.querySelectorAll("tr"));
+		}
+
+		async function updateAllStatuses() {
+			const pending = rows
+				.filter((row) => !row.querySelector(".empty"))
+				.map((row) => {
+					const statusSelect = row.querySelector(".statusSelect");
+					return {
+						row,
+						id: row.dataset.id,
+						date: row.dataset.date || "",
+						status: statusSelect ? statusSelect.value : "",
+						originalStatus: row.dataset.originalStatus || "",
+						updatable: isUpdatable(row.dataset.date || ""),
+					};
+				});
+
+			const updates = pending
+				.filter((item) => item.status && item.status !== item.originalStatus)
+				.filter((item) => item.updatable);
+
+			if (updates.length === 0) {
+				alert("No changes to update.");
+				return;
+			}
+
+			const response = await fetch("/attendance/update-bulk", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					updates: updates.map((item) => ({
+						id: item.id,
+						date: item.date,
+						status: item.status,
+					})),
+				}),
+			});
+
+			const result = await response.json().catch(() => ({}));
+			if (response.ok && result.ok) {
+				updates.forEach((item) => {
+					item.row.dataset.status = item.status;
+					item.row.dataset.originalStatus = item.status;
+				});
+				applyFilters();
+				alert("Statuses updated successfully.");
+				return;
+			}
+
+			const message = result.message || "Failed to update statuses.";
+			alert(message);
+		}
+
+		async function markAllPresent() {
+			const selectedDate = dateFilter.value.trim();
+			if (!selectedDate) {
+				alert("Please select a date first.");
+				return;
+			}
+
+			if (confirm(`Mark all students as present for ${selectedDate}?`)) {
+				const response = await fetch("/attendance/mark-all-present", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						date: selectedDate,
+					}),
+				});
+
+				const result = await response.json().catch(() => ({}));
+				if (response.ok && result.ok) {
+					rows.forEach((row) => {
+						if (!row.querySelector(".empty") && row.dataset.date === selectedDate) {
+							const statusSelect = row.querySelector(".statusSelect");
+							if (statusSelect) {
+								statusSelect.value = "present";
+								row.dataset.status = "present";
+								row.dataset.originalStatus = "present";
+							}
+						}
+					});
+					applyFilters();
+					alert("All students marked as present for " + selectedDate);
+					return;
+				}
+
+				const message = result.message || "Failed to mark all as present.";
+				alert(message);
+			}
+		}
+
+		studentFilter.addEventListener("change", applyFilters);
+		statusFilter.addEventListener("change", applyFilters);
+		idFilter.addEventListener("input", applyFilters);
+		dateFilter.addEventListener("input", applyFilters);
+		searchFilter.addEventListener("input", applyFilters);
+		updateAllBtn.addEventListener("click", updateAllStatuses);
+		markAllPresentBtn.addEventListener("click", markAllPresent);
+		applyFilters();
+
+		rows.forEach((row) => bindRowEvents(row));
+
+		dateFilter.addEventListener("change", async () => {
+			const selectedDate = dateFilter.value.trim();
+			if (!selectedDate) {
+				window.location.reload();
+				return;
+			}
+
+			const response = await fetch("/attendance/ensure-date", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ date: selectedDate }),
+			});
+
+			const result = await response.json().catch(() => ({}));
+			if (response.ok && result.ok) {
+				rebuildTable(result.rows || []);
+				applyFilters();
+				return;
+			}
+
+			alert(result.message || "Failed to load attendance for the selected date.");
+		});
+	</script>
+</body>
+</html>
