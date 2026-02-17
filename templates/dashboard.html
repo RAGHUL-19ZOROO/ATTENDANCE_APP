@@ -12,15 +12,16 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="logo.png">
 	<style>
 		:root {
-			--ink: #0c1b2a;
-			--muted: #5c6b76;
-			--surface: #ffffff;
-			--accent: #f4a03a;
-			--accent-strong: #f06d3f;
-			--teal: #1f8a84;
-			--teal-strong: #0f6a64;
-			--line: #e0e7ee;
-			--shadow: 0 18px 50px rgba(12, 27, 42, 0.12);
+			--ink: #e6edf6;
+			--muted: #9fb0c1;
+			--surface: rgba(12, 18, 26, 0.75);
+			--surface-strong: rgba(12, 18, 26, 0.88);
+			--accent: #f0a64b;
+			--accent-strong: #e57a4c;
+			--teal: #2aa39b;
+			--teal-strong: #17837d;
+			--line: rgba(255, 255, 255, 0.08);
+			--shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
 		}
 		* {
 			box-sizing: border-box;
@@ -31,9 +32,9 @@
 			margin: 0;
 			min-height: 100vh;
 			background:
-				radial-gradient(circle at 10% 20%, rgba(244, 160, 58, 0.18), transparent 55%),
-				radial-gradient(circle at 90% 10%, rgba(31, 138, 132, 0.18), transparent 50%),
-				linear-gradient(135deg, #f7fbff 0%, #f0f8f5 45%, #fff4ea 100%);
+				radial-gradient(circle at 10% 20%, rgba(240, 166, 75, 0.16), transparent 55%),
+				radial-gradient(circle at 90% 10%, rgba(42, 163, 155, 0.16), transparent 50%),
+				linear-gradient(135deg, #05070b 0%, #0b1118 45%, #101a24 100%);
 			padding: 28px 18px 60px;
 		}
 		.shell {
@@ -43,17 +44,16 @@
 			gap: 22px;
 		}
 		.hero {
-			
-			background: transparent;
-			backdrop-filter: blur(55px);
-			
+			background: var(--surface);
+			backdrop-filter: blur(22px);
+			-webkit-backdrop-filter: blur(22px);
 			border-radius: 22px;
 			padding: 22px 26px;
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
 			gap: 20px;
-			border: 1px solid rgba(12, 27, 42, 0.06);
+			border: 1px solid var(--line);
 			box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.953);
 		}
 		.hero-left {
@@ -66,7 +66,7 @@
 			height: 72px;
 			border-radius: 18px;
 			object-fit: contain;
-			background: #f7f9fb;
+			background: rgba(255, 255, 255, 0.08);
 			padding: 10px;
 		}
 		.hero h1 {
@@ -93,10 +93,12 @@
 		}
 		.filters {
 			background: var(--surface);
+			backdrop-filter: blur(18px);
+			-webkit-backdrop-filter: blur(18px);
 			border-radius: 20px;
 			padding: 18px 20px 8px;
 			box-shadow: var(--shadow);
-			border: 1px solid rgba(12, 27, 42, 0.06);
+			border: 1px solid var(--line);
 		}
 		.filters h3 {
 			margin: 0 0 16px;
@@ -108,6 +110,12 @@
 			grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 			gap: 14px;
 			align-items: end;
+		}
+		.control-actions {
+			display: flex;
+			gap: 12px;
+			flex-wrap: wrap;
+			align-items: center;
 		}
 		.control {
 			display: flex;
@@ -124,7 +132,7 @@
 			border-radius: 12px;
 			font-size: 0.95rem;
 			font-weight: 500;
-			background: #fdfdfd;
+			background: rgba(11, 17, 24, 0.9);
 			color: var(--ink);
 		}
 		#updateAllBtn {
@@ -144,15 +152,19 @@
 		}
 		.table-card {
 			background: var(--surface);
+			backdrop-filter: blur(18px);
+			-webkit-backdrop-filter: blur(18px);
 			border-radius: 22px;
 			padding: 14px;
 			box-shadow: var(--shadow);
-			border: 1px solid rgba(12, 27, 42, 0.06);
+			border: 1px solid var(--line);
+			overflow-x: auto;
 		}
 		table {
 			width: 100%;
 			border-collapse: collapse;
 			background: transparent;
+			min-width: 420px;
 		}
 		th, td {
 			padding: 12px 14px;
@@ -175,16 +187,16 @@
 			border-radius: 10px;
 			border: 1px solid var(--line);
 			font-weight: 600;
-			background: #fff8f1;
+			background: rgba(16, 24, 35, 0.9);
 			color: var(--ink);
 		}
 		.locked td {
 			color: var(--muted);
 		}
 		.locked .statusSelect {
-			background: #f2f4f6;
-			color: #8a97a3;
-			border-color: #dde4ea;
+			background: rgba(16, 24, 35, 0.6);
+			color: #7f8fa3;
+			border-color: rgba(255, 255, 255, 0.06);
 		}
 		.empty {
 			text-align: center;
@@ -245,9 +257,47 @@
 				flex-direction: column;
 				align-items: flex-start;
 			}
+			.hero-left {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+			.hero img {
+				width: 64px;
+				height: 64px;
+			}
+			.hero h1 {
+				font-size: 1.1rem;
+			}
 			.hero-tag {
 				align-self: flex-start;
 			}
+			.controls {
+				grid-template-columns: 1fr;
+			}
+			.control-actions {
+				flex-direction: column;
+				align-items: stretch;
+			}
+			#updateAllBtn,
+			#markAllPresentBtn {
+				width: 100%;
+			}
+			.shell {
+				gap: 16px;
+			}
+			body {
+				padding: 20px 14px 40px;
+			}
+			table {
+				min-width: 320px;
+			}
+			th, td {
+				padding: 10px 10px;
+				font-size: 0.9rem;
+			}
+		}
+		.hero img {
+			background: rgba(255, 255, 255, 0.08);
 		}
 	</style>
 </head>
@@ -274,15 +324,6 @@
 			<h3>Filter & Update</h3>
 			<div class="controls">
 				<label class="control">
-					Student
-					<select id="studentFilter">
-						<option value="all">All Students</option>
-						{% for student_id in student_ids %}
-						<option value="{{ student_id }}">{{ student_id }}</option>
-						{% endfor %}
-					</select>
-				</label>
-				<label class="control">
 					Status
 					<select id="statusFilter">
 						<option value="all">All Status</option>
@@ -292,20 +333,25 @@
 					</select>
 				</label>
 				<label class="control">
-					ID
-					<input id="idFilter" type="text" placeholder="Filter by ID">
-				</label>
-				<label class="control">
 					Date
 					<input id="dateFilter" type="date">
+				</label>
+				<label class="control">
+					Period
+					<select id="periodFilter">
+						{% for period in period_options %}
+						<option value="{{ period }}">Period {{ period }}</option>
+						{% endfor %}
+					</select>
 				</label>
 				<label class="control">
 					Search
 					<input id="searchFilter" type="text" placeholder="Search any field...">
 				</label>
-				<a href="{{ url_for('chart_page') }}" class="chart-btn"> View Charts</a>
-				<button id="updateAllBtn" type="button">Update All</button>
-				<button id="markAllPresentBtn" type="button">Mark All Present</button>
+				<div class="control-actions">
+					<button id="updateAllBtn" type="button">Update All</button>
+					<button id="markAllPresentBtn" type="button">Mark All Present</button>
+				</div>
 			</div>
 		</section>
 
@@ -315,17 +361,15 @@
 					<tr>
 						<th>ID</th>
 						<th>Name</th>
-						<th>Date</th>
 						<th>Status</th>
 					</tr>
 				</thead>
 				<tbody>
 					{% if attendances and attendances|length > 0 %}
 						{% for row in attendances %}
-						<tr data-student="{{ row.get('Name', '') }}" data-status="{{ row.get('status', '') }}" data-original-status="{{ row.get('status', '') }}" data-id="{{ row.get('Id', '') }}" data-date="{{ row.get('date', row.get('Date', '')) }}">
+						<tr data-student="{{ row.get('Name', '') }}" data-status="{{ row.get('status', '') }}" data-original-status="{{ row.get('status', '') }}" data-id="{{ row.get('Id', '') }}" data-date="{{ row.get('date', row.get('Date', '')) }}" data-period="{{ row.get('period', 1) }}">
 							<td>{{ row.get('Id', '') }}</td>
 							<td>{{ row.get('Name', '') }}</td>
-							<td>{{ row.get('date', row.get('Date', '')) }}</td>
 							<td>
 								<select class="statusSelect">
 									{% for status in status_options %}
@@ -337,7 +381,7 @@
 						{% endfor %}
 					{% else %}
 						<tr>
-							<td class="empty" colspan="4">No attendance records found.</td>
+							<td class="empty" colspan="3">No attendance records found.</td>
 						</tr>
 					{% endif %}
 				</tbody>
@@ -346,10 +390,9 @@
 	</div>
 
 	<script>
-		const studentFilter = document.getElementById("studentFilter");
 		const statusFilter = document.getElementById("statusFilter");
-		const idFilter = document.getElementById("idFilter");
 		const dateFilter = document.getElementById("dateFilter");
+		const periodFilter = document.getElementById("periodFilter");
 		const searchFilter = document.getElementById("searchFilter");
 		const updateAllBtn = document.getElementById("updateAllBtn");
 		const markAllPresentBtn = document.getElementById("markAllPresentBtn");
@@ -370,29 +413,26 @@
 		}
 
 		function applyFilters() {
-			const selectedStudent = studentFilter.value.toLowerCase();
 			const selectedStatus = statusFilter.value.toLowerCase();
-			const idText = idFilter.value.toLowerCase().trim();
 			const dateText = dateFilter.value.trim();
+			const selectedPeriod = periodFilter.value.trim();
 			const searchText = searchFilter.value.toLowerCase().trim();
 
 			rows.forEach((row) => {
 				if (row.querySelector(".empty")) {
 					return;
 				}
-				const studentName = (row.dataset.student || "").toLowerCase();
 				const statusValue = (row.dataset.status || "").toLowerCase();
-				const idValue = (row.dataset.id || "").toLowerCase();
 				const dateValue = (row.dataset.date || "").toLowerCase();
+				const periodValue = (row.dataset.period || "").toLowerCase();
 				const rowText = row.innerText.toLowerCase();
 
-				const matchesStudent = selectedStudent === "all" || studentName === selectedStudent;
 				const matchesStatus = selectedStatus === "all" || statusValue === selectedStatus;
-				const matchesId = !idText || idValue.includes(idText);
 				const matchesDate = !dateText || dateValue.startsWith(dateText.toLowerCase());
+				const matchesPeriod = !selectedPeriod || periodValue === selectedPeriod.toLowerCase();
 				const matchesSearch = !searchText || rowText.includes(searchText);
 
-				row.style.display = matchesStudent && matchesStatus && matchesId && matchesDate && matchesSearch ? "" : "none";
+				row.style.display = matchesStatus && matchesDate && matchesPeriod && matchesSearch ? "" : "none";
 			});
 		}
 
@@ -417,7 +457,7 @@
 			tableBody.innerHTML = "";
 			if (!rowsData.length) {
 				const emptyRow = document.createElement("tr");
-				emptyRow.innerHTML = '<td class="empty" colspan="4">No attendance records found.</td>';
+				emptyRow.innerHTML = '<td class="empty" colspan="3">No attendance records found.</td>';
 				tableBody.appendChild(emptyRow);
 				rows = [emptyRow];
 				return;
@@ -430,6 +470,7 @@
 				row.dataset.originalStatus = rowData.status || "";
 				row.dataset.id = rowData.Id || "";
 				row.dataset.date = rowData.date || "";
+				row.dataset.period = rowData.period || "";
 
 				const statusOptions = `
 					{% for status in status_options %}
@@ -440,7 +481,6 @@
 				row.innerHTML = `
 					<td>${rowData.Id ?? ""}</td>
 					<td>${rowData.Name ?? ""}</td>
-					<td>${rowData.date ?? ""}</td>
 					<td>
 						<select class="statusSelect">
 							${statusOptions}
@@ -466,6 +506,7 @@
 						row,
 						id: row.dataset.id,
 						date: row.dataset.date || "",
+						period: row.dataset.period || "",
 						status: statusSelect ? statusSelect.value : "",
 						originalStatus: row.dataset.originalStatus || "",
 						updatable: isUpdatable(row.dataset.date || ""),
@@ -490,6 +531,7 @@
 					updates: updates.map((item) => ({
 						id: item.id,
 						date: item.date,
+						period: item.period,
 						status: item.status,
 					})),
 				}),
@@ -512,12 +554,13 @@
 
 		async function markAllPresent() {
 			const selectedDate = dateFilter.value.trim();
+			const selectedPeriod = periodFilter.value.trim();
 			if (!selectedDate) {
 				alert("Please select a date first.");
 				return;
 			}
 
-			if (confirm(`Mark all students as present for ${selectedDate}?`)) {
+			if (confirm(`Mark all students as present for ${selectedDate} (Period ${selectedPeriod})?`)) {
 				const response = await fetch("/attendance/mark-all-present", {
 					method: "POST",
 					headers: {
@@ -525,13 +568,14 @@
 					},
 					body: JSON.stringify({
 						date: selectedDate,
+						period: selectedPeriod,
 					}),
 				});
 
 				const result = await response.json().catch(() => ({}));
 				if (response.ok && result.ok) {
 					rows.forEach((row) => {
-						if (!row.querySelector(".empty") && row.dataset.date === selectedDate) {
+						if (!row.querySelector(".empty") && row.dataset.date === selectedDate && row.dataset.period === selectedPeriod) {
 							const statusSelect = row.querySelector(".statusSelect");
 							if (statusSelect) {
 								statusSelect.value = "present";
@@ -541,7 +585,7 @@
 						}
 					});
 					applyFilters();
-					alert("All students marked as present for " + selectedDate);
+					alert("All students marked as present for " + selectedDate + " (Period " + selectedPeriod + ")");
 					return;
 				}
 
@@ -550,10 +594,9 @@
 			}
 		}
 
-		studentFilter.addEventListener("change", applyFilters);
 		statusFilter.addEventListener("change", applyFilters);
-		idFilter.addEventListener("input", applyFilters);
 		dateFilter.addEventListener("input", applyFilters);
+		periodFilter.addEventListener("change", applyFilters);
 		searchFilter.addEventListener("input", applyFilters);
 		updateAllBtn.addEventListener("click", updateAllStatuses);
 		markAllPresentBtn.addEventListener("click", markAllPresent);
@@ -561,8 +604,9 @@
 
 		rows.forEach((row) => bindRowEvents(row));
 
-		dateFilter.addEventListener("change", async () => {
+		async function refreshAttendanceForSelection() {
 			const selectedDate = dateFilter.value.trim();
+			const selectedPeriod = periodFilter.value.trim();
 			if (!selectedDate) {
 				window.location.reload();
 				return;
@@ -573,7 +617,7 @@
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify({ date: selectedDate }),
+				body: JSON.stringify({ date: selectedDate, period: selectedPeriod }),
 			});
 
 			const result = await response.json().catch(() => ({}));
@@ -584,7 +628,10 @@
 			}
 
 			alert(result.message || "Failed to load attendance for the selected date.");
-		});
+		}
+
+		dateFilter.addEventListener("change", refreshAttendanceForSelection);
+		periodFilter.addEventListener("change", refreshAttendanceForSelection);
 	</script>
 </body>
 </html>

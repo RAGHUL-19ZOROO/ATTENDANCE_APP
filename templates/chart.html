@@ -4,23 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Attendance Chart</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --ink: #e6edf6;
+            --muted: #9fb0c1;
+            --surface: rgba(12, 18, 26, 0.75);
+            --accent: #f0a64b;
+            --accent-strong: #e57a4c;
+            --teal: #2aa39b;
+            --teal-strong: #17837d;
+            --line: rgba(255, 255, 255, 0.08);
+            --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+        }
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: Arial, sans-serif;
-            max-width: 900px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            font-family: "Rubik", "Space Grotesk", sans-serif;
+            color: var(--ink);
+            margin: 0;
+            min-height: 100vh;
+            padding: 28px 18px 60px;
+            background:
+                radial-gradient(circle at 10% 20%, rgba(240, 166, 75, 0.16), transparent 55%),
+                radial-gradient(circle at 90% 10%, rgba(42, 163, 155, 0.16), transparent 50%),
+                linear-gradient(135deg, #05070b 0%, #0b1118 45%, #101a24 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .container {
-            background: white;
+            width: 100%;
+            max-width: 900px;
+            background: var(--surface);
             padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
         }
         h1 {
-            color: #333;
+            color: var(--ink);
             text-align: center;
+            margin-top: 0;
         }
         .form-group {
             margin: 20px 0;
@@ -28,23 +58,30 @@
         label {
             display: block;
             margin-bottom: 8px;
-            font-weight: bold;
+            font-weight: 600;
+            color: var(--muted);
         }
         select, button {
             width: 100%;
             padding: 10px;
             font-size: 16px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+        }
+        select {
+            background: rgba(11, 17, 24, 0.9);
+            color: var(--ink);
         }
         button {
-            background-color: #4CAF50;
-            color: white;
+            background: linear-gradient(135deg, var(--teal) 0%, var(--teal-strong) 100%);
+            color: #ffffff;
             cursor: pointer;
             margin-top: 10px;
+            font-weight: 600;
+            border: none;
         }
         button:hover {
-            background-color: #45a049;
+            opacity: 0.95;
         }
         #chartContainer {
             margin-top: 30px;
@@ -53,8 +90,8 @@
         #chartImage {
             max-width: 100%;
             height: auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
         }
         .stats {
             margin-top: 20px;
@@ -64,17 +101,26 @@
             display: inline-block;
             margin: 0 15px;
             padding: 10px 20px;
-            border-radius: 4px;
+            border-radius: 8px;
         }
         .back-link {
             display: block;
             text-align: center;
             margin-top: 20px;
-            color: #4CAF50;
+            color: var(--accent);
             text-decoration: none;
+            font-weight: 600;
         }
         .back-link:hover {
             text-decoration: underline;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 22px;
+            }
+            body {
+                padding: 20px 14px 40px;
+            }
         }
     </style>
 </head>
