@@ -15,7 +15,7 @@ if not _mongo_username or not _mongo_password:
 _mongo_uri = (
     "mongodb+srv://"
     f"{_mongo_username}:{_mongo_password}"
-    "@cluster0.1qzk13u.mongodb.net/?appName=Cluster0"
+    "@cluster0.3zsbhl9.mongodb.net/?appName=Cluster0"
 )
 
 client = MongoClient(_mongo_uri, server_api=ServerApi("1"))
