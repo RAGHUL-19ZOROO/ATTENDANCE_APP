@@ -1,7 +1,24 @@
-from pymongo import MongoClient
 from datetime import datetime
+import os
 
-client = MongoClient("mongodb://localhost:27017/")
+from dotenv import load_dotenv
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+
+load_dotenv()
+
+_mongo_username = os.getenv("MONGODB_USERNAME")
+_mongo_password = os.getenv("MONGODB_PASSWORD")
+if not _mongo_username or not _mongo_password:
+    raise RuntimeError("Missing MONGODB_USERNAME or MONGODB_PASSWORD environment variable.")
+
+_mongo_uri = (
+    "mongodb+srv://"
+    f"{_mongo_username}:{_mongo_password}"
+    "@cluster0.1qzk13u.mongodb.net/?appName=Cluster0"
+)
+
+client = MongoClient(_mongo_uri, server_api=ServerApi("1"))
 db = client["college"]
 
 # Drop and recreate the collection to clear all data

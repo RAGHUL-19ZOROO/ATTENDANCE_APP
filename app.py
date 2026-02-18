@@ -1,19 +1,44 @@
 from datetime import datetime
 from functools import wraps
-import pandas as pd
-import matplotlib.pyplot as plt
 import os
 
+import pandas as pd
+import matplotlib.pyplot as plt
+
 from flask import Flask, jsonify, render_template, request, redirect, session, url_for
-from pymongo import MongoClient
+from dotenv import load_dotenv
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 
 app = Flask(__name__)
 app.secret_key = "attendance-portal-secret-key"
 
+load_dotenv()
+
 ADMIN_USERNAME = "HOD"
 ADMIN_PASSWORD = "5115"
 
-client = MongoClient("mongodb://localhost:27017/")
+_mongo_username = os.getenv("MONGODB_USERNAME")
+_mongo_password = os.getenv("MONGODB_PASSWORD")
+if not _mongo_username or not _mongo_password:
+    raise RuntimeError("Missing MONGODB_USERNAME or MONGODB_PASSWORD environment variable.")
+
+_mongo_uri = (
+    "mongodb+srv://"
+    f"{_mongo_username}:{_mongo_password}"
+    "@cluster0.1qzk13u.mongodb.net/?appName=Cluster0"
+)
+
+# Create a new client and connect to the server
+client = MongoClient(_mongo_uri, server_api=ServerApi("1"))
+
+# Send a ping to confirm a successful connection
+try:
+    client.admin.command("ping")
+    print("Pinged your deployment. You successfully connected to MongoDB!")
+except Exception as exc:
+    print(exc)
+
 db = client["college"]
 attendances_collection = db["attendancesAIDS"]
 status_options = ["present", "absent", "late"]
