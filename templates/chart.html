@@ -64,6 +64,11 @@
             font-weight: 600;
             color: var(--muted);
         }
+        .date-range {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+        }
         select, button {
             width: 100%;
             padding: 10px;
@@ -71,7 +76,7 @@
             border: 1px solid var(--line);
             border-radius: 10px;
         }
-        select {
+        select, input[type="date"] {
             background: rgba(11, 17, 24, 0.9);
             color: var(--ink);
         }
@@ -140,6 +145,17 @@
                 {% endfor %}
             </select>
         </div>
+
+        <div class="form-group date-range">
+            <div>
+                <label for="fromDate">From Date:</label>
+                <input type="date" id="fromDate">
+            </div>
+            <div>
+                <label for="toDate">To Date:</label>
+                <input type="date" id="toDate">
+            </div>
+        </div>
         
         <button onclick="loadChart()">Generate Chart</button>
         
@@ -155,17 +171,31 @@
     <script>
         function loadChart() {
             const studentId = document.getElementById('studentSelect').value;
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
             
             if (!studentId) {
                 alert('Please select a student');
                 return;
             }
+
+            if (!fromDate || !toDate) {
+                alert('Please select both From Date and To Date');
+                return;
+            }
+
+            if (fromDate > toDate) {
+                alert('From Date cannot be greater than To Date');
+                return;
+            }
             
-            fetch(`/attendance/chart/${studentId}`)
+            const query = `from_date=${encodeURIComponent(fromDate)}&to_date=${encodeURIComponent(toDate)}`;
+
+            fetch(`/attendance/chart/${studentId}?${query}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.ok) {
-                        document.getElementById('studentName').textContent = data.student_name;
+                        document.getElementById('studentName').textContent = `${data.student_name} (${data.from_date} to ${data.to_date})`;
                         document.getElementById('chartImage').src = data.chart_url + '?t=' + new Date().getTime();
                         
                         const statsHtml = `

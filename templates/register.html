@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Login - Attendance Portal</title>
+	<title>{{ title or 'Login' }} - Attendance Portal</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
@@ -42,6 +42,20 @@
 		.shell {
 			max-width: 600px;
 			width: 100%;
+		}
+		.navbar {
+			display: flex;
+			justify-content: flex-end;
+			margin-bottom: 12px;
+		}
+		.nav-link {
+			text-decoration: none;
+			color: var(--ink);
+			background: var(--surface);
+			border: 1px solid var(--line);
+			padding: 8px 14px;
+			border-radius: 10px;
+			font-weight: 600;
 		}
 		.hero {
 			background: var(--surface);
@@ -178,6 +192,9 @@
 </head>
 <body>
 	<div class="shell">
+		<nav class="navbar">
+			<a href="{{ url_for('index') }}" class="nav-link">Home</a>
+		</nav>
 		<section class="hero">
 			<img src="{{ url_for('static', filename='/images/logo.png') }}" alt="Logo">
 			<div>
@@ -188,8 +205,8 @@
 		</section>
 
 		<section class="card">
-			<h2>Admin Login</h2>
-			<form method="POST" action="/auth/login">
+			<h2>{{ title or 'Login' }}</h2>
+			<form method="POST" action="{{ url_for('auth_login', role=role_key or 'hod') }}">
 				<div class="form-group">
 					<label for="username">Username</label>
 					<input type="text" id="username" name="username" placeholder="Enter username" required>
@@ -203,8 +220,11 @@
 				{% endif %}
 				<button type="submit" class="btn btn-primary">Login</button>
 			</form>
+			<div style="font-size: 0.85rem; color: var(--muted); margin-top: 12px; text-align: center;">
+				Role: {{ role_label or 'HOD' }}
+			</div>
 			<div class="back-link">
-				<a href="/">Back to Home</a>
+				<a href="{{ url_for('login_page') }}">Back to Role Selection</a>
 			</div>
 		</section>
 	</div>

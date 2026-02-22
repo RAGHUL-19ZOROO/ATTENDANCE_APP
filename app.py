@@ -15,8 +15,15 @@ app.secret_key = "attendance-portal-secret-key"
 
 load_dotenv()
 
-ADMIN_USERNAME = "HOD"
-ADMIN_PASSWORD = "5115"
+HOD_USERNAME = "HOD"
+HOD_PASSWORD = "5115"
+CLASS_REP_USERNAME = "CLASSREP"
+CLASS_REP_PASSWORD = "5115"
+
+ROLE_CREDENTIALS = {
+    "hod": {"username": HOD_USERNAME, "password": HOD_PASSWORD},
+    "classrep": {"username": CLASS_REP_USERNAME, "password": CLASS_REP_PASSWORD},
+}
 
 _mongo_username = os.getenv("MONGODB_USERNAME")
 _mongo_password = os.getenv("MONGODB_PASSWORD")
@@ -106,6 +113,16 @@ def _attendance_rows_for_date(date_text, period):
     return rows
 
 
+def _daterange_days(start_date, end_date):
+    day_count = (end_date - start_date).days + 1
+    for day_offset in range(day_count):
+        yield start_date.fromordinal(start_date.toordinal() + day_offset)
+
+
+def _is_sunday(date_value):
+    return date_value.weekday() == 6
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -115,6 +132,23 @@ def login_required(f):
     return decorated_function
 
 
+def role_required(role):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not session.get("logged_in"):
+                return redirect(url_for("login_page"))
+            if session.get("role") != role:
+                return redirect(url_for("dashboard"))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
+hod_required = role_required("hod")
+class_rep_required = role_required("classrep")
+
+
 @app.route("/")
 def index():
     return render_template('index.html')
@@ -122,21 +156,54 @@ def index():
 
 @app.route("/login")
 def login_page():
+    return render_template("login_select.html")
+
+
+@app.route("/login/hod")
+def login_hod_page():
     error = request.args.get("error")
-    return render_template("register.html", error=error)
+    return render_template(
+        "register.html",
+        error=error,
+        role_key="hod",
+        role_label="HOD",
+        title="HOD Login",
+    )
 
 
-@app.route("/auth/login", methods=["POST"])
-def auth_login():
-    username = request.form.get("username").strip()
-    password = request.form.get("password").strip()
+@app.route("/login/classrep")
+def login_classrep_page():
+    error = request.args.get("error")
+    return render_template(
+        "register.html",
+        error=error,
+        role_key="classrep",
+        role_label="Class Rep",
+        title="Class Rep Login",
+    )
 
-    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+
+@app.route("/auth/login/<role>", methods=["POST"])
+def auth_login(role):
+    role = (role or "").lower().strip()
+    creds = ROLE_CREDENTIALS.get(role)
+    if not creds:
+        return redirect(url_for("login_page"))
+
+    username = (request.form.get("username") or "").strip()
+    password = (request.form.get("password") or "").strip()
+
+    if username == creds["username"] and password == creds["password"]:
         session["logged_in"] = True
         session["username"] = username
-        return redirect(url_for("dashboard"))
+        session["role"] = role
+        if role == "hod":
+            return redirect(url_for("hod_dashboard"))
+        return redirect(url_for("classrep_dashboard"))
 
-    return redirect(url_for("login_page", error="Invalid username or password."))
+    if role == "hod":
+        return redirect(url_for("login_hod_page", error="Invalid username or password."))
+    return redirect(url_for("login_classrep_page", error="Invalid username or password."))
 
 
 @app.route("/logout")
@@ -148,6 +215,15 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
+    role = session.get("role")
+    if role == "hod":
+        return redirect(url_for("hod_dashboard"))
+    return redirect(url_for("classrep_dashboard"))
+
+
+@app.route("/classrep/dashboard")
+@class_rep_required
+def classrep_dashboard():
     documents = list(attendances_collection.find({}, {"_id": 0}))
     students = attendances_collection.find({}, {"_id": 0, "Id": 1, "Name": 1})
     student_list = [{"Id": s["Id"], "Name": s["Name"]} for s in students]
@@ -174,8 +250,81 @@ def dashboard():
         period_options=period_options,
     )
 
+
+@app.route("/classrep/percentage")
+@class_rep_required
+def classrep_percentage_page():
+    return render_template("classrep_percentage.html")
+
+
+def _build_hod_dashboard_data(date_text):
+    attendance_date = datetime.strptime(date_text, "%Y-%m-%d")
+    rows = []
+    total_present_hours = 0
+
+    for doc in attendances_collection.find({}, {"_id": 0}):
+        periods = {period: "absent" for period in period_options}
+        for entry in doc.get("attendance", []):
+            entry_period = _parse_period(entry.get("period", 1))
+            if entry_period is None:
+                continue
+            if entry.get("date") == attendance_date:
+                periods[entry_period] = entry.get("status", "absent")
+
+        present_hours = sum(1 for status in periods.values() if status in ["present", "late"])
+        absent_hours = len(period_options) - present_hours
+        day_status = "absent" if absent_hours >= 5 else "present"
+        percentage = round((present_hours / len(period_options)) * 100, 2)
+        total_present_hours += present_hours
+
+        rows.append({
+            "Id": doc.get("Id", ""),
+            "Name": doc.get("Name", ""),
+            "present_hours": present_hours,
+            "absent_hours": absent_hours,
+            "day_status": day_status,
+            "percentage": percentage,
+        })
+
+    present_days = sum(1 for row in rows if row["day_status"] == "present")
+    absent_days = len(rows) - present_days
+    total_hours = len(rows) * len(period_options)
+    overall_percentage = round((total_present_hours / total_hours) * 100, 2) if total_hours else 0
+
+    return {
+        "rows": rows,
+        "total_students": len(rows),
+        "present_days": present_days,
+        "absent_days": absent_days,
+        "overall_percentage": overall_percentage,
+    }
+
+
+@app.route("/hod/dashboard")
+@hod_required
+def hod_dashboard():
+    date_text = request.args.get("date")
+    if not date_text:
+        date_text = datetime.now().strftime("%Y-%m-%d")
+
+    try:
+        dashboard_data = _build_hod_dashboard_data(date_text)
+    except ValueError:
+        date_text = datetime.now().strftime("%Y-%m-%d")
+        dashboard_data = _build_hod_dashboard_data(date_text)
+
+    return render_template(
+        "hod_dashboard.html",
+        selected_date=date_text,
+        rows=dashboard_data["rows"],
+        total_students=dashboard_data["total_students"],
+        present_days=dashboard_data["present_days"],
+        absent_days=dashboard_data["absent_days"],
+        overall_percentage=dashboard_data["overall_percentage"],
+    )
+
 @app.route("/attendance/update", methods=["POST"])
-@login_required
+@class_rep_required
 def update_attendance():
     payload = request.get_json(silent=True) or {}
     student_id = payload.get("id")
@@ -213,7 +362,7 @@ def update_attendance():
     return jsonify({"ok": True, "message": "Status updated."})
 
 @app.route("/attendance/update-bulk", methods=["POST"])
-@login_required
+@class_rep_required
 def update_attendance_bulk():
     payload = request.get_json(silent=True) or {}
     updates = payload.get("updates", [])
@@ -275,7 +424,7 @@ def update_attendance_bulk():
 
 
 @app.route("/attendance/ensure-date", methods=["POST"])
-@login_required
+@class_rep_required
 def ensure_attendance_date():
     payload = request.get_json(silent=True) or {}
     date_text = payload.get("date")
@@ -301,7 +450,7 @@ def ensure_attendance_date():
 
 
 @app.route("/attendance/mark-all-present", methods=["POST"])
-@login_required
+@class_rep_required
 def mark_all_present():
     payload = request.get_json(silent=True) or {}
     date_text = payload.get("date")
@@ -334,6 +483,76 @@ def mark_all_present():
     return jsonify({"ok": True, "message": "All students marked as present."})
 
 
+@app.route("/attendance/percentage-range", methods=["POST"])
+@class_rep_required
+def attendance_percentage_range():
+    payload = request.get_json(silent=True) or {}
+    from_date_text = (payload.get("from_date") or "").strip()
+    to_date_text = (payload.get("to_date") or "").strip()
+
+    if not from_date_text:
+        return jsonify({"ok": False, "message": "from_date is required."}), 400
+
+    if not to_date_text:
+        to_date_text = datetime.now().strftime("%Y-%m-%d")
+
+    try:
+        from_date = datetime.strptime(from_date_text, "%Y-%m-%d").date()
+        to_date = datetime.strptime(to_date_text, "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"ok": False, "message": "Invalid date format. Use YYYY-MM-DD."}), 400
+
+    if from_date > to_date:
+        return jsonify({"ok": False, "message": "from_date cannot be greater than to_date."}), 400
+
+    valid_dates = {
+        datetime.combine(date_item, datetime.min.time())
+        for date_item in _daterange_days(from_date, to_date)
+        if not _is_sunday(date_item)
+    }
+    total_hours = len(valid_dates) * len(period_options)
+
+    if total_hours == 0:
+        return jsonify({"ok": False, "message": "Selected range contains only Sundays. No working days to calculate."}), 400
+
+    rows = []
+    for doc in attendances_collection.find({}, {"_id": 0}):
+        seen_slots = set()
+        present_hours = 0
+
+        for entry in doc.get("attendance", []):
+            entry_date = entry.get("date")
+            entry_period = _parse_period(entry.get("period", 1))
+            if entry_date not in valid_dates or entry_period is None:
+                continue
+
+            slot_key = (entry_date, entry_period)
+            if slot_key in seen_slots:
+                continue
+            seen_slots.add(slot_key)
+
+            if entry.get("status") in ["present", "late"]:
+                present_hours += 1
+
+        percentage = round((present_hours / total_hours) * 100, 2) if total_hours else 0
+        rows.append({
+            "Id": doc.get("Id", ""),
+            "Name": doc.get("Name", ""),
+            "present_hours": present_hours,
+            "total_hours": total_hours,
+            "percentage": percentage,
+        })
+
+    rows.sort(key=lambda row: row["percentage"], reverse=True)
+
+    return jsonify({
+        "ok": True,
+        "from_date": from_date_text,
+        "to_date": to_date_text,
+        "rows": rows,
+    })
+
+
 @app.route("/attendance/chart/<int:student_id>")
 @login_required
 def student_chart(student_id):
@@ -344,35 +563,77 @@ def student_chart(student_id):
     
     if not student:
         return jsonify({"ok": False, "message": "Student not found."}), 404
-    
+
+    from_date_text = (request.args.get("from_date") or "").strip()
+    to_date_text = (request.args.get("to_date") or "").strip()
+
+    from_date = None
+    to_date = None
+    if from_date_text or to_date_text:
+        if not from_date_text or not to_date_text:
+            return jsonify({"ok": False, "message": "Both from_date and to_date are required."}), 400
+        try:
+            from_date = datetime.strptime(from_date_text, "%Y-%m-%d").date()
+            to_date = datetime.strptime(to_date_text, "%Y-%m-%d").date()
+        except ValueError:
+            return jsonify({"ok": False, "message": "Invalid date format. Use YYYY-MM-DD."}), 400
+
+        if from_date > to_date:
+            return jsonify({"ok": False, "message": "from_date cannot be greater than to_date."}), 400
 
     status_counts = {"present": 0, "absent": 0, "late": 0}
     for entry in student.get("attendance", []):
+        entry_date = entry.get("date")
+        if from_date and to_date:
+            if not entry_date or not hasattr(entry_date, "date"):
+                continue
+            entry_day = entry_date.date()
+            if entry_day < from_date or entry_day > to_date:
+                continue
+            if _is_sunday(entry_day):
+                continue
+
         status = entry.get("status", "absent")
         if status in status_counts:
             status_counts[status] += 1
+
+    if sum(status_counts.values()) == 0:
+        return jsonify({"ok": False, "message": "No attendance records found in the selected date range."}), 404
     
 
     plt.figure(figsize=(8, 6))
     colors = ['#4CAF50', '#F44336', '#FF9800']
     plt.pie(status_counts.values(), labels=status_counts.keys(), autopct='%1.1f%%', 
             colors=colors, startangle=90)
-    plt.title(f"Attendance Chart - {student.get('Name', 'Unknown')} (ID: {student_id})")
+    if from_date and to_date:
+        plt.title(
+            f"Attendance Chart - {student.get('Name', 'Unknown')} (ID: {student_id})\n"
+            f"{from_date_text} to {to_date_text}"
+        )
+    else:
+        plt.title(f"Attendance Chart - {student.get('Name', 'Unknown')} (ID: {student_id})")
     
  
     static_dir = os.path.join(app.root_path, 'static')
     if not os.path.exists(static_dir):
         os.makedirs(static_dir)
     
-    chart_path = os.path.join(static_dir, f'chart_{student_id}.png')
+    if from_date and to_date:
+        chart_file = f"chart_{student_id}_{from_date_text}_{to_date_text}.png"
+    else:
+        chart_file = f"chart_{student_id}.png"
+
+    chart_path = os.path.join(static_dir, chart_file)
     plt.savefig(chart_path, bbox_inches='tight')
     plt.close()
     
     return jsonify({
         "ok": True, 
-        "chart_url": url_for('static', filename=f'chart_{student_id}.png'),
+        "chart_url": url_for('static', filename=chart_file),
         "student_name": student.get('Name', 'Unknown'),
-        "stats": status_counts
+        "stats": status_counts,
+        "from_date": from_date_text,
+        "to_date": to_date_text,
     })
 
 

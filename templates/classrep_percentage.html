@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Class Rep Percentage</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+	<style>
+		:root {
+			--ink: #e6edf6;
+			--muted: #9fb0c1;
+			--surface: rgba(12, 18, 26, 0.75);
+			--line: rgba(255, 255, 255, 0.08);
+			--shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+		}
+		* { box-sizing: border-box; }
+		body {
+			font-family: "Rubik", "Space Grotesk", sans-serif;
+			color: var(--ink);
+			margin: 0;
+			min-height: 100vh;
+			background:
+				radial-gradient(circle at 10% 20%, rgba(240, 166, 75, 0.16), transparent 55%),
+				radial-gradient(circle at 90% 10%, rgba(42, 163, 155, 0.16), transparent 50%),
+				linear-gradient(135deg, #05070b 0%, #0b1118 45%, #101a24 100%);
+			padding: 28px 18px 60px;
+		}
+		.shell { max-width: 1120px; margin: 0 auto; display: grid; gap: 22px; }
+		.card {
+			background: var(--surface);
+			border: 1px solid var(--line);
+			box-shadow: var(--shadow);
+			border-radius: 20px;
+			padding: 18px 20px;
+			backdrop-filter: blur(18px);
+			-webkit-backdrop-filter: blur(18px);
+		}
+		.hero {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 12px;
+		}
+		.hero h1 { margin: 0; font-size: 1.3rem; }
+		.hero p { margin: 6px 0 0; color: var(--muted); }
+		.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+		.btn {
+			padding: 10px 14px;
+			border-radius: 10px;
+			text-decoration: none;
+			font-weight: 600;
+			color: #fff;
+			border: none;
+			cursor: pointer;
+		}
+		.btn-att { background: linear-gradient(135deg, #2aa39b 0%, #17837d 100%); }
+		.btn-chart { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+		.btn-export { background: linear-gradient(135deg, #f0a64b 0%, #e57a4c 100%); }
+		.btn-calc { background: linear-gradient(135deg, #7f5af0 0%, #6b4ad4 100%); }
+		.btn-logout { background: #dc3545; }
+		.controls {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+			gap: 12px;
+			align-items: end;
+		}
+		label {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+			color: var(--muted);
+			font-size: 0.9rem;
+			font-weight: 600;
+		}
+		input {
+			padding: 10px 12px;
+			border: 1px solid var(--line);
+			border-radius: 10px;
+			background: rgba(11, 17, 24, 0.9);
+			color: var(--ink);
+		}
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			min-width: 520px;
+		}
+		th, td {
+			padding: 10px 12px;
+			border-bottom: 1px solid var(--line);
+			text-align: left;
+		}
+		th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; }
+		.note { color: var(--muted); font-size: 0.88rem; margin-top: 8px; }
+		.table-wrap { overflow-x: auto; margin-top: 12px; }
+	</style>
+</head>
+<body>
+	<div class="shell">
+		<section class="card hero">
+			<div>
+				<h1>Class Rep Percentage Calculator</h1>
+				<p>From date to till date percentage calculation. Sundays are excluded.</p>
+			</div>
+			<div class="actions">
+				<a class="btn btn-att" href="{{ url_for('classrep_dashboard') }}">Attendance</a>
+				<a class="btn btn-chart" href="{{ url_for('chart_page') }}">Charts</a>
+				<a class="btn btn-logout" href="{{ url_for('logout') }}">Logout</a>
+			</div>
+		</section>
+
+		<section class="card">
+			<div class="controls">
+				<label>
+					From Date
+					<input id="fromDate" type="date">
+				</label>
+				<label>
+					To Date
+					<input id="toDate" type="date">
+				</label>
+				<div class="actions">
+					<button id="calcPercentageBtn" class="btn btn-calc" type="button">Calculate Percentage</button>
+					<button id="exportPercentageBtn" class="btn btn-export" type="button">Export</button>
+				</div>
+			</div>
+			<div id="percentageMeta" class="note"></div>
+			<div id="percentageOutput" class="table-wrap"></div>
+		</section>
+	</div>
+
+	<script>
+		const fromDate = document.getElementById("fromDate");
+		const toDate = document.getElementById("toDate");
+		const calcPercentageBtn = document.getElementById("calcPercentageBtn");
+		const exportPercentageBtn = document.getElementById("exportPercentageBtn");
+		const percentageOutput = document.getElementById("percentageOutput");
+		const percentageMeta = document.getElementById("percentageMeta");
+
+		let latestPercentageRows = [];
+		let latestPercentageFromDate = "";
+		let latestPercentageToDate = "";
+
+		const todayStr = new Date().toISOString().slice(0, 10);
+		fromDate.value = todayStr;
+		toDate.value = todayStr;
+
+		function renderPercentageRows(rowsData) {
+			if (!rowsData || rowsData.length === 0) {
+				percentageOutput.innerHTML = "<p class='note'>No records found for the selected range.</p>";
+				return;
+			}
+
+			const html = `
+				<table>
+					<thead>
+						<tr>
+							<th>ID</th>
+							<th>Name</th>
+							<th>Present Hours</th>
+							<th>Total Hours</th>
+							<th>Percentage</th>
+						</tr>
+					</thead>
+					<tbody>
+						${rowsData.map((row) => `
+							<tr>
+								<td>${row.Id ?? ""}</td>
+								<td>${row.Name ?? ""}</td>
+								<td>${row.present_hours ?? 0}</td>
+								<td>${row.total_hours ?? 0}</td>
+								<td>${row.percentage ?? 0}%</td>
+							</tr>
+						`).join("")}
+					</tbody>
+				</table>
+			`;
+
+			percentageOutput.innerHTML = html;
+		}
+
+		async function calculateRangePercentage() {
+			const selectedFromDate = fromDate.value.trim();
+			const selectedToDate = toDate.value.trim() || todayStr;
+
+			if (!selectedFromDate) {
+				alert("Please select From Date.");
+				return;
+			}
+
+			const response = await fetch("/attendance/percentage-range", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					from_date: selectedFromDate,
+					to_date: selectedToDate,
+				}),
+			});
+
+			const result = await response.json().catch(() => ({}));
+			if (!response.ok || !result.ok) {
+				alert(result.message || "Failed to calculate percentage.");
+				return;
+			}
+
+			percentageMeta.textContent = `Range: ${result.from_date} to ${result.to_date}`;
+			latestPercentageRows = result.rows || [];
+			latestPercentageFromDate = result.from_date || selectedFromDate;
+			latestPercentageToDate = result.to_date || selectedToDate;
+			renderPercentageRows(latestPercentageRows);
+		}
+
+		function sanitizeFilePart(value) {
+			return (value || "").replace(/[^a-zA-Z0-9_-]/g, "-");
+		}
+
+		function triggerDownload(content, mimeType, fileName) {
+			const blob = new Blob([content], { type: mimeType });
+			const url = URL.createObjectURL(blob);
+			const anchor = document.createElement("a");
+			anchor.href = url;
+			anchor.download = fileName;
+			document.body.appendChild(anchor);
+			anchor.click();
+			document.body.removeChild(anchor);
+			URL.revokeObjectURL(url);
+		}
+
+		function toCsvValue(value) {
+			const text = String(value ?? "");
+			if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
+				return `"${text.replace(/\"/g, '""')}"`;
+			}
+			return text;
+		}
+
+		function exportAsCsv() {
+			const headers = ["ID", "Name", "Present Hours", "Total Hours", "Percentage"];
+			const lines = [headers.join(",")];
+			latestPercentageRows.forEach((row) => {
+				lines.push([
+					toCsvValue(row.Id),
+					toCsvValue(row.Name),
+					toCsvValue(row.present_hours),
+					toCsvValue(row.total_hours),
+					toCsvValue(`${row.percentage}%`),
+				].join(","));
+			});
+
+			const fileName = `attendance_percentage_${sanitizeFilePart(latestPercentageFromDate)}_to_${sanitizeFilePart(latestPercentageToDate)}.csv`;
+			triggerDownload(lines.join("\n"), "text/csv;charset=utf-8;", fileName);
+		}
+
+		function exportAsExcel() {
+			const tableHtml = `
+				<table border="1">
+					<tr><th>ID</th><th>Name</th><th>Present Hours</th><th>Total Hours</th><th>Percentage</th></tr>
+					${latestPercentageRows.map((row) => `
+						<tr>
+							<td>${row.Id ?? ""}</td>
+							<td>${row.Name ?? ""}</td>
+							<td>${row.present_hours ?? 0}</td>
+							<td>${row.total_hours ?? 0}</td>
+							<td>${row.percentage ?? 0}%</td>
+						</tr>
+					`).join("")}
+				</table>
+			`;
+
+			const fileName = `attendance_percentage_${sanitizeFilePart(latestPercentageFromDate)}_to_${sanitizeFilePart(latestPercentageToDate)}.xls`;
+			triggerDownload(tableHtml, "application/vnd.ms-excel", fileName);
+		}
+
+		function exportAsPdf() {
+			const printWindow = window.open("", "_blank");
+			if (!printWindow) {
+				alert("Popup blocked. Please allow popups to export PDF.");
+				return;
+			}
+
+			const rowsHtml = latestPercentageRows.map((row) => `
+				<tr>
+					<td>${row.Id ?? ""}</td>
+					<td>${row.Name ?? ""}</td>
+					<td>${row.present_hours ?? 0}</td>
+					<td>${row.total_hours ?? 0}</td>
+					<td>${row.percentage ?? 0}%</td>
+				</tr>
+			`).join("");
+
+			printWindow.document.write(`
+				<html>
+				<head>
+					<title>Attendance Percentage Export</title>
+					<style>
+						body { font-family: Arial, sans-serif; padding: 20px; }
+						h2 { margin-bottom: 6px; }
+						table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+						th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+						th { background: #f2f2f2; }
+					</style>
+				</head>
+				<body>
+					<h2>Attendance Percentage Report</h2>
+					<p>Range: ${latestPercentageFromDate} to ${latestPercentageToDate}</p>
+					<table>
+						<tr><th>ID</th><th>Name</th><th>Present Hours</th><th>Total Hours</th><th>Percentage</th></tr>
+						${rowsHtml}
+					</table>
+				</body>
+				</html>
+			`);
+			printWindow.document.close();
+			printWindow.focus();
+			printWindow.print();
+		}
+
+		function exportPercentageData() {
+			if (!latestPercentageRows.length) {
+				alert("Please calculate percentage first, then export.");
+				return;
+			}
+
+			const formatInput = prompt("Choose export format: csv, excel, or pdf", "csv");
+			if (!formatInput) {
+				return;
+			}
+
+			const format = formatInput.trim().toLowerCase();
+			if (format === "csv") {
+				exportAsCsv();
+				return;
+			}
+			if (format === "excel" || format === "xlsx" || format === "xls") {
+				exportAsExcel();
+				return;
+			}
+			if (format === "pdf") {
+				exportAsPdf();
+				return;
+			}
+
+			alert("Invalid format. Please choose csv, excel, or pdf.");
+		}
+
+		calcPercentageBtn.addEventListener("click", calculateRangePercentage);
+		exportPercentageBtn.addEventListener("click", exportPercentageData);
+	</script>
+</body>
+</html>
