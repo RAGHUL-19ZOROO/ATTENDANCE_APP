@@ -483,6 +483,63 @@ def mark_all_present():
     return jsonify({"ok": True, "message": "All students marked as present."})
 
 
+@app.route("/attendance/copy-previous-period", methods=["POST"])
+@class_rep_required
+def copy_previous_period_attendance():
+    payload = request.get_json(silent=True) or {}
+    date_text = payload.get("date")
+    period = _parse_period(payload.get("period", 1))
+
+    if not date_text or period is None:
+        return jsonify({"ok": False, "message": "Date and period are required."}), 400
+
+    if period <= 1:
+        return jsonify({"ok": False, "message": "Previous period is not available for Period 1."}), 400
+
+    try:
+        attendance_date = datetime.strptime(date_text, "%Y-%m-%d")
+    except ValueError:
+        return jsonify({"ok": False, "message": "Invalid date."}), 400
+
+    if not _is_update_allowed(date_text):
+        return jsonify({"ok": False, "message": "Updates allowed only for current date and past dates."}), 403
+
+    previous_period = period - 1
+    current_match = _attendance_match(attendance_date, period)
+    copied_count = 0
+
+    for doc in attendances_collection.find({}, {"_id": 0, "Id": 1, "attendance": 1}):
+        student_id = doc.get("Id")
+        if student_id is None:
+            continue
+
+        previous_status = "absent"
+        for entry in doc.get("attendance", []):
+            entry_period = _parse_period(entry.get("period", 1))
+            if entry.get("date") == attendance_date and entry_period == previous_period:
+                previous_status = entry.get("status", "absent")
+                break
+
+        result = attendances_collection.update_one(
+            {"Id": student_id, "attendance": {"$elemMatch": current_match}},
+            {"$set": {"attendance.$.status": previous_status, "attendance.$.period": period}},
+        )
+
+        if result.matched_count == 0:
+            attendances_collection.update_one(
+                {"Id": student_id},
+                {"$push": {"attendance": {"date": attendance_date, "period": period, "status": previous_status}}},
+            )
+
+        copied_count += 1
+
+    return jsonify({
+        "ok": True,
+        "message": f"Copied Period {previous_period} attendance to Period {period}.",
+        "updated": copied_count,
+    })
+
+
 @app.route("/attendance/percentage-range", methods=["POST"])
 @class_rep_required
 def attendance_percentage_range():

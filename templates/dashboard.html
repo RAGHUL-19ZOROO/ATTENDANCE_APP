@@ -252,6 +252,21 @@
 			transform: translateY(-2px);
 			box-shadow: 0 14px 30px rgba(76, 175, 80, 0.35);
 		}
+		#copyPrevBtn {
+			padding: 12px 18px;
+			border: none;
+			border-radius: 14px;
+			background: linear-gradient(135deg, #7f5af0 0%, #6b4ad4 100%);
+			color: #ffffff;
+			font-weight: 600;
+			cursor: pointer;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			box-shadow: 0 12px 26px rgba(127, 90, 240, 0.25);
+		}
+		#copyPrevBtn:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 14px 30px rgba(127, 90, 240, 0.35);
+		}
 		@media (max-width: 768px) {
 			.hero {
 				flex-direction: column;
@@ -279,7 +294,8 @@
 				align-items: stretch;
 			}
 			#updateAllBtn,
-			#markAllPresentBtn {
+			#markAllPresentBtn,
+			#copyPrevBtn {
 				width: 100%;
 			}
 			.shell {
@@ -352,6 +368,7 @@
 				<div class="control-actions">
 					<button id="updateAllBtn" type="button">Update All</button>
 					<button id="markAllPresentBtn" type="button">Mark All Present</button>
+					<button id="copyPrevBtn" type="button">Use Previous Period</button>
 				</div>
 			</div>
 		</section>
@@ -397,6 +414,7 @@
 		const searchFilter = document.getElementById("searchFilter");
 		const updateAllBtn = document.getElementById("updateAllBtn");
 		const markAllPresentBtn = document.getElementById("markAllPresentBtn");
+		const copyPrevBtn = document.getElementById("copyPrevBtn");
 		const table = document.getElementById("attendanceTable");
 		const tableBody = table.querySelector("tbody");
 		let rows = Array.from(tableBody.querySelectorAll("tr"));
@@ -595,12 +613,52 @@
 			}
 		}
 
+		async function copyPreviousPeriod() {
+			const selectedDate = dateFilter.value.trim();
+			const selectedPeriod = Number(periodFilter.value.trim() || "0");
+
+			if (!selectedDate) {
+				alert("Please select a date first.");
+				return;
+			}
+
+			if (selectedPeriod <= 1) {
+				alert("Previous period is not available for Period 1.");
+				return;
+			}
+
+			if (!confirm(`Copy Period ${selectedPeriod - 1} attendance to Period ${selectedPeriod} for ${selectedDate}?`)) {
+				return;
+			}
+
+			const response = await fetch("/attendance/copy-previous-period", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					date: selectedDate,
+					period: selectedPeriod,
+				}),
+			});
+
+			const result = await response.json().catch(() => ({}));
+			if (!response.ok || !result.ok) {
+				alert(result.message || "Failed to copy from previous period.");
+				return;
+			}
+
+			alert(result.message || "Previous period copied successfully.");
+			await refreshAttendanceForSelection();
+		}
+
 		statusFilter.addEventListener("change", applyFilters);
 		dateFilter.addEventListener("input", applyFilters);
 		periodFilter.addEventListener("change", applyFilters);
 		searchFilter.addEventListener("input", applyFilters);
 		updateAllBtn.addEventListener("click", updateAllStatuses);
 		markAllPresentBtn.addEventListener("click", markAllPresent);
+		copyPrevBtn.addEventListener("click", copyPreviousPeriod);
 		applyFilters();
 
 		rows.forEach((row) => bindRowEvents(row));

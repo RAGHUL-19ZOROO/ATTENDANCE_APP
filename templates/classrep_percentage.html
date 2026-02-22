@@ -122,7 +122,9 @@
 				</label>
 				<div class="actions">
 					<button id="calcPercentageBtn" class="btn btn-calc" type="button">Calculate Percentage</button>
-					<button id="exportPercentageBtn" class="btn btn-export" type="button">Export</button>
+					<button id="exportCsvBtn" class="btn btn-export" type="button">Export CSV</button>
+					<button id="exportExcelBtn" class="btn btn-export" type="button">Export Excel</button>
+					<button id="exportPdfBtn" class="btn btn-export" type="button">Export PDF</button>
 				</div>
 			</div>
 			<div id="percentageMeta" class="note"></div>
@@ -134,7 +136,9 @@
 		const fromDate = document.getElementById("fromDate");
 		const toDate = document.getElementById("toDate");
 		const calcPercentageBtn = document.getElementById("calcPercentageBtn");
-		const exportPercentageBtn = document.getElementById("exportPercentageBtn");
+		const exportCsvBtn = document.getElementById("exportCsvBtn");
+		const exportExcelBtn = document.getElementById("exportExcelBtn");
+		const exportPdfBtn = document.getElementById("exportPdfBtn");
 		const percentageOutput = document.getElementById("percentageOutput");
 		const percentageMeta = document.getElementById("percentageMeta");
 
@@ -318,36 +322,39 @@
 			printWindow.print();
 		}
 
-		function exportPercentageData() {
+		function ensureExportReady() {
 			if (!latestPercentageRows.length) {
 				alert("Please calculate percentage first, then export.");
-				return;
+				return false;
 			}
+			return true;
+		}
 
-			const formatInput = prompt("Choose export format: csv, excel, or pdf", "csv");
-			if (!formatInput) {
+		function exportCsvClick() {
+			if (!ensureExportReady()) {
 				return;
 			}
+			exportAsCsv();
+		}
 
-			const format = formatInput.trim().toLowerCase();
-			if (format === "csv") {
-				exportAsCsv();
+		function exportExcelClick() {
+			if (!ensureExportReady()) {
 				return;
 			}
-			if (format === "excel" || format === "xlsx" || format === "xls") {
-				exportAsExcel();
-				return;
-			}
-			if (format === "pdf") {
-				exportAsPdf();
-				return;
-			}
+			exportAsExcel();
+		}
 
-			alert("Invalid format. Please choose csv, excel, or pdf.");
+		function exportPdfClick() {
+			if (!ensureExportReady()) {
+				return;
+			}
+			exportAsPdf();
 		}
 
 		calcPercentageBtn.addEventListener("click", calculateRangePercentage);
-		exportPercentageBtn.addEventListener("click", exportPercentageData);
+		exportCsvBtn.addEventListener("click", exportCsvClick);
+		exportExcelBtn.addEventListener("click", exportExcelClick);
+		exportPdfBtn.addEventListener("click", exportPdfClick);
 	</script>
 </body>
 </html>
