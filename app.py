@@ -12,6 +12,16 @@ from pymongo.server_api import ServerApi
 
 app = Flask(__name__)
 app.secret_key = "attendance-portal-secret-key"
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+
+
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 load_dotenv()
 
