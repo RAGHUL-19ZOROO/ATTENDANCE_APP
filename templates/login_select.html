@@ -99,6 +99,10 @@
 			background: linear-gradient(135deg, var(--teal) 0%, var(--teal-strong) 100%);
 			box-shadow: 0 12px 26px rgba(31, 138, 132, 0.25);
 		}
+		.btn-principal {
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			box-shadow: 0 12px 26px rgba(102, 126, 234, 0.25);
+		}
 	</style>
 </head>
 <body>
@@ -109,7 +113,7 @@
 		<section class="hero">
 			<img src="{{ url_for('static', filename='/images/logo.png') }}" alt="Logo">
 			<div>
-				<h1>P.T. LEE CHENGALVARAYA NAICKER COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
+				<h1>P.T. LEE CHENGALVARAYA NAICKER<br>COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
 				<p>Attendance Management System</p>
 			</div>
 		</section>
@@ -118,6 +122,7 @@
 			<div class="button-group">
 				<a href="{{ url_for('login_hod_page') }}" class="btn btn-hod">Login as HOD</a>
 				<a href="{{ url_for('login_classrep_page') }}" class="btn btn-classrep">Login as Class Rep</a>
+				<a href="{{ url_for('login_principal_page') }}" class="btn btn-principal">Login as Principal</a>
 			</div>
 		</section>
 	</div>

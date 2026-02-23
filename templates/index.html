@@ -149,6 +149,15 @@
 			transform: translateY(-2px);
 			box-shadow: 0 14px 30px rgba(244, 160, 58, 0.35);
 		}
+		.btn-tertiary {
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: #ffffff;
+			box-shadow: 0 12px 26px rgba(102, 126, 234, 0.25);
+		}
+		.btn-tertiary:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 14px 30px rgba(102, 126, 234, 0.35);
+		}
 		@media (max-width: 768px) {
 			.hero {
 				padding: 20px;
@@ -164,7 +173,7 @@
 		<section class="hero">
 			<img src="{{ url_for('static', filename='/images/logo.png') }}" alt="Logo">
 			<div>
-				<h1>P.T. LEE CHENGALVARAYA NAICKER COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
+				<h1>P.T. LEE CHENGALVARAYA NAICKER<br>COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
 				<p>Attendance Management System</p>
 			</div>
 			<div class="hero-tag">Welcome</div>
@@ -175,6 +184,7 @@
 			<div class="button-group">
 				<a href="/login/hod" class="btn btn-secondary">HOD Login</a>
 				<a href="/login/classrep" class="btn btn-primary">Class Rep Login</a>
+				<a href="{{ url_for('login_principal_page') }}" class="btn btn-tertiary">Principal Settings</a>
 			</div>
 		</section>
 	</div>

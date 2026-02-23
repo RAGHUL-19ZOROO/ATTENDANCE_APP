@@ -3,3 +3,4 @@ pandas
 matplotlib
 pymongo
 python-dotenv
+waitress

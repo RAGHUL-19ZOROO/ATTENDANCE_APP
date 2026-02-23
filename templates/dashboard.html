@@ -116,6 +116,7 @@
 			gap: 12px;
 			flex-wrap: wrap;
 			align-items: center;
+			grid-column: 1 / -1;
 		}
 		.control {
 			display: flex;
@@ -124,6 +125,30 @@
 			font-size: 0.85rem;
 			font-weight: 600;
 			color: var(--muted);
+		}
+		.toggle-wrap {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			font-size: 0.85rem;
+			font-weight: 600;
+			color: var(--muted);
+		}
+		.toggle-wrap input[type="checkbox"] {
+			width: 18px;
+			height: 18px;
+		}
+		.small-note {
+			font-size: 0.78rem;
+			color: var(--muted);
+		}
+		#saturdayLeaveControl {
+			display: none;
+			grid-column: 1 / -1;
+			padding: 10px 12px;
+			border: 1px solid var(--line);
+			border-radius: 12px;
+			background: rgba(11, 17, 24, 0.5);
 		}
 		.control select,
 		.control input {
@@ -323,7 +348,7 @@
 			<div class="hero-left">
 				<img src="{{ url_for('static', filename='/images/logo.png') }}" alt="Logo">
 				<div>
-					<h1>P.T. LEE CHENGALVARAYA NAICKER COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
+					<h1>P.T. LEE CHENGALVARAYA NAICKER<br>COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
 					<p>Attendance Dashboard for daily roll call updates and quick auditing.</p>
 				</div>
 			</div>
@@ -331,7 +356,6 @@
 				<div class="hero-tag">Live Attendance</div>
 				<div style="display: flex; gap: 8px;">
 					<a href="{{ url_for('classrep_percentage_page') }}" class="logout-btn" style="background: linear-gradient(135deg, #7f5af0 0%, #6b4ad4 100%);"> Percentage</a>
-					<a href="{{ url_for('chart_page') }}" class="logout-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"> Charts</a>
 					<a href="/logout" class="logout-btn">Logout</a>
 				</div>
 			</div>
@@ -365,6 +389,14 @@
 					Search
 					<input id="searchFilter" type="text" placeholder="Search any field...">
 				</label>
+				<div class="control" id="saturdayLeaveControl">
+					<label class="toggle-wrap" for="saturdayLeaveToggle">
+						<input id="saturdayLeaveToggle" type="checkbox">
+						Saturday Full Leave
+					</label>
+					<button id="saveSaturdayOptionBtn" type="button" class="chart-btn" style="padding: 10px 12px;">Save Saturday Option</button>
+					<div class="small-note">Used in percentage and result calculations.</div>
+				</div>
 				<div class="control-actions">
 					<button id="updateAllBtn" type="button">Update All</button>
 					<button id="markAllPresentBtn" type="button">Mark All Present</button>
@@ -415,6 +447,9 @@
 		const updateAllBtn = document.getElementById("updateAllBtn");
 		const markAllPresentBtn = document.getElementById("markAllPresentBtn");
 		const copyPrevBtn = document.getElementById("copyPrevBtn");
+		const saturdayLeaveToggle = document.getElementById("saturdayLeaveToggle");
+		const saveSaturdayOptionBtn = document.getElementById("saveSaturdayOptionBtn");
+		const saturdayLeaveControl = document.getElementById("saturdayLeaveControl");
 		const table = document.getElementById("attendanceTable");
 		const tableBody = table.querySelector("tbody");
 		let rows = Array.from(tableBody.querySelectorAll("tr"));
@@ -429,6 +464,29 @@
 
 		function isUpdatable(dateStr) {
 			return dateStr <= todayStr;
+		}
+
+		function isSaturday(dateText) {
+			if (!dateText) {
+				return false;
+			}
+			const day = new Date(`${dateText}T00:00:00`).getDay();
+			return day === 6;
+		}
+
+		function updateSaturdayOptionVisibility(isLeaveForDate = false) {
+			if (!saturdayLeaveControl) {
+				return;
+			}
+
+			const showOption = isSaturday(dateFilter.value.trim());
+			saturdayLeaveControl.style.display = showOption ? "flex" : "none";
+			if (!showOption && saturdayLeaveToggle) {
+				saturdayLeaveToggle.checked = false;
+			}
+			if (showOption && saturdayLeaveToggle) {
+				saturdayLeaveToggle.checked = !!isLeaveForDate;
+			}
 		}
 
 		function applyFilters() {
@@ -652,6 +710,44 @@
 			await refreshAttendanceForSelection();
 		}
 
+		async function saveSaturdayOption(showMessage = true) {
+			if (!saturdayLeaveToggle) {
+				return true;
+			}
+
+			const selectedDate = dateFilter.value.trim();
+			if (!isSaturday(selectedDate)) {
+				if (showMessage) {
+					alert("Saturday leave option is available only for Saturday dates.");
+				}
+				return false;
+			}
+
+			const response = await fetch("/classrep/settings/saturday", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					date: selectedDate,
+					saturday_is_leave: saturdayLeaveToggle.checked,
+				}),
+			});
+
+			const result = await response.json().catch(() => ({}));
+			if (!response.ok || !result.ok) {
+				if (showMessage) {
+					alert(result.message || "Failed to save Saturday option.");
+				}
+				return false;
+			}
+
+			if (showMessage) {
+				alert("Saturday option saved.");
+			}
+			return true;
+		}
+
 		statusFilter.addEventListener("change", applyFilters);
 		dateFilter.addEventListener("input", applyFilters);
 		periodFilter.addEventListener("change", applyFilters);
@@ -659,6 +755,10 @@
 		updateAllBtn.addEventListener("click", updateAllStatuses);
 		markAllPresentBtn.addEventListener("click", markAllPresent);
 		copyPrevBtn.addEventListener("click", copyPreviousPeriod);
+		if (saveSaturdayOptionBtn) {
+			saveSaturdayOptionBtn.addEventListener("click", () => saveSaturdayOption(true));
+		}
+		updateSaturdayOptionVisibility();
 		applyFilters();
 
 		rows.forEach((row) => bindRowEvents(row));
@@ -682,6 +782,7 @@
 			const result = await response.json().catch(() => ({}));
 			if (response.ok && result.ok) {
 				rebuildTable(result.rows || []);
+				updateSaturdayOptionVisibility(result.saturday_is_leave_for_date === true);
 				applyFilters();
 				return;
 			}
@@ -690,6 +791,7 @@
 		}
 
 		dateFilter.addEventListener("change", refreshAttendanceForSelection);
+		dateFilter.addEventListener("change", () => updateSaturdayOptionVisibility(false));
 		periodFilter.addEventListener("change", refreshAttendanceForSelection);
 	</script>
 </body>

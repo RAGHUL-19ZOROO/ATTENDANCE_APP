@@ -51,9 +51,23 @@
 			border-radius: 10px;
 			font-weight: 600;
 		}
+		.chart-link {
+			text-decoration: none;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: #fff;
+			padding: 8px 12px;
+			border-radius: 10px;
+			font-weight: 600;
+		}
+		.hero-actions {
+			display: flex;
+			gap: 8px;
+			align-items: center;
+		}
 		.filter-form { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
 		.filter-form label { display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 0.9rem; }
-		.filter-form input {
+		.filter-form input,
+		.filter-form select {
 			padding: 10px 12px;
 			border: 1px solid var(--line);
 			border-radius: 10px;
@@ -93,7 +107,10 @@
 				<h1>HOD Attendance Dashboard</h1>
 				<p>Daily absent/present and percentage based on total hours present / total 8 hours.</p>
 			</div>
-			<a href="{{ url_for('logout') }}" class="logout">Logout</a>
+			<div class="hero-actions">
+				<a href="{{ url_for('chart_page') }}" class="chart-link">Charts</a>
+				<a href="{{ url_for('logout') }}" class="logout">Logout</a>
+			</div>
 		</section>
 
 		<section class="card">
@@ -101,6 +118,24 @@
 				<label>
 					Select Date
 					<input type="date" name="date" value="{{ selected_date }}" required>
+				</label>
+				<label>
+					Period
+					<select name="period">
+						<option value="">All (1-8)</option>
+						{% for period in range(1, 9) %}
+						<option value="{{ period }}" {% if selected_period == period %}selected{% endif %}>Period {{ period }}</option>
+						{% endfor %}
+					</select>
+				</label>
+				<label>
+					Percentage
+					<select name="percentage">
+						<option value="">All</option>
+						{% for percentage_value, percentage_label in percentage_options %}
+						<option value="{{ percentage_value }}" {% if selected_percentage == percentage_value %}selected{% endif %}>{{ percentage_label }}</option>
+						{% endfor %}
+					</select>
 				</label>
 				<button type="submit">View</button>
 			</form>
@@ -138,12 +173,13 @@
 					</tr>
 				</thead>
 				<tbody>
+					{% set total_periods = selected_period if selected_period else 8 %}
 					{% for row in rows %}
 					<tr>
 						<td>{{ row.Id }}</td>
 						<td>{{ row.Name }}</td>
-						<td>{{ row.present_hours }}/8</td>
-						<td>{{ row.absent_hours }}/8</td>
+						<td>{{ row.present_hours }}/{{ total_periods }}</td>
+						<td>{{ row.absent_hours }}/{{ total_periods }}</td>
 						<td>
 							<span class="badge {% if row.day_status == 'present' %}badge-present{% else %}badge-absent{% endif %}">
 								{{ row.day_status }}

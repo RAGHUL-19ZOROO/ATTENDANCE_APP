@@ -19,10 +19,13 @@ HOD_USERNAME = "HOD"
 HOD_PASSWORD = "5115"
 CLASS_REP_USERNAME = "CLASSREP"
 CLASS_REP_PASSWORD = "5115"
+PRINCIPAL_USERNAME = "PRINCIPAL"
+PRINCIPAL_PASSWORD = "5115"
 
 ROLE_CREDENTIALS = {
     "hod": {"username": HOD_USERNAME, "password": HOD_PASSWORD},
     "classrep": {"username": CLASS_REP_USERNAME, "password": CLASS_REP_PASSWORD},
+    "principal": {"username": PRINCIPAL_USERNAME, "password": PRINCIPAL_PASSWORD},
 }
 
 _mongo_username = os.getenv("MONGODB_USERNAME")
@@ -48,8 +51,17 @@ except Exception as exc:
 
 db = client["college"]
 attendances_collection = db["attendancesAIDS"]
+settings_collection = db["portalSettings"]
 status_options = ["present", "absent", "late"]
 period_options = list(range(1, 9))
+percentage_filter_options = {
+    "lt25": "Less than 25%",
+    "25to50": "25% and above and less than 50%",
+    "50to75": "50% and above and less than 75%",
+    "75to100": "75% and above and less than 100%",
+    "100plus": "100% and above",
+}
+SETTINGS_DOC_ID = "global"
 
 
 def _format_date(value):
@@ -123,6 +135,102 @@ def _is_sunday(date_value):
     return date_value.weekday() == 6
 
 
+def _parse_iso_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _default_portal_settings():
+    return {
+        "semester_start": "",
+        "semester_end": "",
+        "saturday_rules": {},
+    }
+
+
+def _get_portal_settings():
+    settings = _default_portal_settings()
+    saved = settings_collection.find_one({"_id": SETTINGS_DOC_ID}) or {}
+    settings["semester_start"] = saved.get("semester_start", "")
+    settings["semester_end"] = saved.get("semester_end", "")
+    raw_rules = saved.get("saturday_rules", {})
+    if isinstance(raw_rules, dict):
+        settings["saturday_rules"] = {
+            str(key): bool(value)
+            for key, value in raw_rules.items()
+        }
+
+    if "saturday_is_leave" in saved and isinstance(saved.get("saturday_is_leave"), bool):
+        settings["legacy_saturday_is_leave"] = saved.get("saturday_is_leave")
+
+    return settings
+
+
+def _save_portal_settings(semester_start, semester_end, saturday_rules):
+    settings_collection.update_one(
+        {"_id": SETTINGS_DOC_ID},
+        {
+            "$set": {
+                "semester_start": semester_start,
+                "semester_end": semester_end,
+                "saturday_rules": saturday_rules,
+            },
+            "$unset": {"saturday_is_leave": ""},
+        },
+        upsert=True,
+    )
+
+
+def _is_saturday_leave(date_value, saturday_rules=None):
+    if date_value.weekday() != 5:
+        return False
+
+    rules = saturday_rules or {}
+    date_key = date_value.strftime("%Y-%m-%d")
+    return bool(rules.get(date_key, False))
+
+
+def _is_excluded_day(date_value, saturday_rules=None):
+    return _is_sunday(date_value) or _is_saturday_leave(date_value, saturday_rules)
+
+
+def _apply_semester_boundaries(from_date, to_date, settings):
+    semester_start = _parse_iso_date(settings.get("semester_start"))
+    semester_end = _parse_iso_date(settings.get("semester_end"))
+
+    effective_from = from_date
+    effective_to = to_date
+
+    if semester_start and effective_from < semester_start:
+        effective_from = semester_start
+    if semester_end and effective_to > semester_end:
+        effective_to = semester_end
+
+    if effective_from > effective_to:
+        return None, None
+
+    return effective_from, effective_to
+
+
+def _entry_in_settings_window(entry, semester_start, semester_end, saturday_rules):
+    entry_date = entry.get("date")
+    if not entry_date or not hasattr(entry_date, "date"):
+        return False
+
+    day = entry_date.date()
+    if semester_start and day < semester_start:
+        return False
+    if semester_end and day > semester_end:
+        return False
+    if _is_excluded_day(day, saturday_rules):
+        return False
+    return True
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -147,6 +255,7 @@ def role_required(role):
 
 hod_required = role_required("hod")
 class_rep_required = role_required("classrep")
+principal_required = role_required("principal")
 
 
 @app.route("/")
@@ -183,6 +292,18 @@ def login_classrep_page():
     )
 
 
+@app.route("/login/principal")
+def login_principal_page():
+    error = request.args.get("error")
+    return render_template(
+        "register.html",
+        error=error,
+        role_key="principal",
+        role_label="Principal",
+        title="Principal Login",
+    )
+
+
 @app.route("/auth/login/<role>", methods=["POST"])
 def auth_login(role):
     role = (role or "").lower().strip()
@@ -197,10 +318,14 @@ def auth_login(role):
         session["logged_in"] = True
         session["username"] = username
         session["role"] = role
+        if role == "principal":
+            return redirect(url_for("principal_settings_page"))
         if role == "hod":
             return redirect(url_for("hod_dashboard"))
         return redirect(url_for("classrep_dashboard"))
 
+    if role == "principal":
+        return redirect(url_for("login_principal_page", error="Invalid username or password."))
     if role == "hod":
         return redirect(url_for("login_hod_page", error="Invalid username or password."))
     return redirect(url_for("login_classrep_page", error="Invalid username or password."))
@@ -216,33 +341,73 @@ def logout():
 @login_required
 def dashboard():
     role = session.get("role")
+    if role == "principal":
+        return redirect(url_for("principal_settings_page"))
     if role == "hod":
         return redirect(url_for("hod_dashboard"))
     return redirect(url_for("classrep_dashboard"))
 
 
+@app.route("/principal/settings", methods=["GET", "POST"])
+@principal_required
+def principal_settings_page():
+    settings = _get_portal_settings()
+    if request.method == "POST":
+        semester_start = (request.form.get("semester_start") or "").strip()
+        semester_end = (request.form.get("semester_end") or "").strip()
+
+        start_date = _parse_iso_date(semester_start)
+        end_date = _parse_iso_date(semester_end)
+
+        if not start_date or not end_date:
+            return render_template(
+                "principal_settings.html",
+                settings=settings,
+                error="Please select valid semester start and end dates.",
+                message="",
+            )
+
+        if start_date > end_date:
+            return render_template(
+                "principal_settings.html",
+                settings=settings,
+                error="Semester start date cannot be after semester end date.",
+                message="",
+            )
+
+        _save_portal_settings(semester_start, semester_end, settings.get("saturday_rules", {}))
+        return redirect(url_for("principal_settings_page", message="Semester dates saved successfully."))
+
+    return render_template(
+        "principal_settings.html",
+        settings=settings,
+        error="",
+        message=request.args.get("message", ""),
+    )
+
+
 @app.route("/classrep/dashboard")
 @class_rep_required
 def classrep_dashboard():
-    documents = list(attendances_collection.find({}, {"_id": 0}))
+    settings = _get_portal_settings()
+    default_date_text = datetime.now().strftime("%Y-%m-%d")
+    default_period = 1
+    default_attendance_date = datetime.strptime(default_date_text, "%Y-%m-%d")
+    default_match = _attendance_match(default_attendance_date, default_period)
+
+    attendances_collection.update_many(
+        {"$nor": [{"attendance": {"$elemMatch": default_match}}]},
+        {"$push": {"attendance": {"date": default_attendance_date, "period": default_period, "status": "absent"}}},
+    )
+
     students = attendances_collection.find({}, {"_id": 0, "Id": 1, "Name": 1})
     student_list = [{"Id": s["Id"], "Name": s["Name"]} for s in students]
     student_ids = [s["Id"] for s in student_list]
-    attendances = []
+    attendances = _attendance_rows_for_date(default_date_text, default_period)
 
-    for doc in documents:
-        student_id = doc.get("Id", "")
-        name = doc.get("Name", "")
-        for entry in doc.get("attendance", []):
-            attendances.append({
-                "Id": student_id,
-                "Name": name,
-                "date": _format_date(entry.get("date")),
-                "period": entry.get("period", 1),
-                "status": entry.get("status", ""),
-            })
     return render_template(
         "dashboard.html",
+        settings=settings,
         attendances=attendances,
         students=student_list,
         student_ids=student_ids,
@@ -254,27 +419,101 @@ def classrep_dashboard():
 @app.route("/classrep/percentage")
 @class_rep_required
 def classrep_percentage_page():
-    return render_template("classrep_percentage.html")
+    settings = _get_portal_settings()
+    return render_template("classrep_percentage.html", settings=settings)
 
 
-def _build_hod_dashboard_data(date_text):
+@app.route("/classrep/settings/saturday", methods=["POST"])
+@class_rep_required
+def update_saturday_leave_setting():
+    payload = request.get_json(silent=True) or {}
+    date_text = (payload.get("date") or "").strip()
+
+    if not date_text:
+        return jsonify({"ok": False, "message": "Date is required."}), 400
+
+    selected_date = _parse_iso_date(date_text)
+    if selected_date is None:
+        return jsonify({"ok": False, "message": "Invalid date."}), 400
+    if selected_date.weekday() != 5:
+        return jsonify({"ok": False, "message": "Saturday leave option can be changed only for Saturday dates."}), 400
+
+    saturday_is_leave = bool(payload.get("saturday_is_leave", False))
+    settings = _get_portal_settings()
+    saturday_rules = dict(settings.get("saturday_rules", {}))
+    saturday_rules[selected_date.strftime("%Y-%m-%d")] = saturday_is_leave
+
+    _save_portal_settings(
+        settings.get("semester_start", ""),
+        settings.get("semester_end", ""),
+        saturday_rules,
+    )
+    return jsonify({
+        "ok": True,
+        "date": selected_date.strftime("%Y-%m-%d"),
+        "saturday_is_leave": saturday_is_leave,
+        "message": "Saturday leave preference saved.",
+    })
+
+
+def _parse_percentage_filter(value):
+    value = (value or "").strip()
+    if not value:
+        return None
+    return value if value in percentage_filter_options else None
+
+
+def _matches_percentage_bucket(percentage, bucket):
+    if bucket is None:
+        return True
+    if bucket == "lt25":
+        return percentage < 25
+    if bucket == "25to50":
+        return 25 <= percentage < 50
+    if bucket == "50to75":
+        return 50 <= percentage < 75
+    if bucket == "75to100":
+        return 75 <= percentage < 100
+    if bucket == "100plus":
+        return percentage >= 100
+    return True
+
+
+def _build_hod_dashboard_data(date_text, selected_period=None, percentage_filter=None):
     attendance_date = datetime.strptime(date_text, "%Y-%m-%d")
     rows = []
     total_present_hours = 0
 
+    if selected_period is None:
+        periods_to_consider = list(period_options)
+    else:
+        periods_to_consider = [selected_period]
+
+    total_periods = len(periods_to_consider)
+    if total_periods == 0:
+        total_periods = len(period_options)
+        periods_to_consider = list(period_options)
+
     for doc in attendances_collection.find({}, {"_id": 0}):
-        periods = {period: "absent" for period in period_options}
+        periods = {period: "absent" for period in periods_to_consider}
         for entry in doc.get("attendance", []):
             entry_period = _parse_period(entry.get("period", 1))
             if entry_period is None:
+                continue
+            if entry_period not in periods:
                 continue
             if entry.get("date") == attendance_date:
                 periods[entry_period] = entry.get("status", "absent")
 
         present_hours = sum(1 for status in periods.values() if status in ["present", "late"])
-        absent_hours = len(period_options) - present_hours
-        day_status = "absent" if absent_hours >= 5 else "present"
-        percentage = round((present_hours / len(period_options)) * 100, 2)
+        absent_hours = total_periods - present_hours
+        absent_threshold = 5 if total_periods == len(period_options) else max(1, (total_periods // 2) + 1)
+        day_status = "absent" if absent_hours >= absent_threshold else "present"
+        percentage = round((present_hours / total_periods) * 100, 2)
+
+        if not _matches_percentage_bucket(percentage, percentage_filter):
+            continue
+
         total_present_hours += present_hours
 
         rows.append({
@@ -288,7 +527,7 @@ def _build_hod_dashboard_data(date_text):
 
     present_days = sum(1 for row in rows if row["day_status"] == "present")
     absent_days = len(rows) - present_days
-    total_hours = len(rows) * len(period_options)
+    total_hours = len(rows) * total_periods
     overall_percentage = round((total_present_hours / total_hours) * 100, 2) if total_hours else 0
 
     return {
@@ -304,18 +543,25 @@ def _build_hod_dashboard_data(date_text):
 @hod_required
 def hod_dashboard():
     date_text = request.args.get("date")
+    selected_period = _parse_period(request.args.get("period"))
+    percentage_filter = _parse_percentage_filter(request.args.get("percentage"))
+
     if not date_text:
         date_text = datetime.now().strftime("%Y-%m-%d")
 
     try:
-        dashboard_data = _build_hod_dashboard_data(date_text)
+        dashboard_data = _build_hod_dashboard_data(date_text, selected_period=selected_period, percentage_filter=percentage_filter)
     except ValueError:
         date_text = datetime.now().strftime("%Y-%m-%d")
-        dashboard_data = _build_hod_dashboard_data(date_text)
+        dashboard_data = _build_hod_dashboard_data(date_text, selected_period=selected_period, percentage_filter=percentage_filter)
 
     return render_template(
         "hod_dashboard.html",
         selected_date=date_text,
+        selected_period=selected_period,
+        selected_percentage=percentage_filter,
+        period_options=period_options,
+        percentage_options=percentage_filter_options.items(),
         rows=dashboard_data["rows"],
         total_students=dashboard_data["total_students"],
         present_days=dashboard_data["present_days"],
@@ -446,7 +692,16 @@ def ensure_attendance_date():
     )
 
     rows = _attendance_rows_for_date(date_text, period)
-    return jsonify({"ok": True, "rows": rows})
+    date_value = attendance_date.date()
+    settings = _get_portal_settings()
+    saturday_rules = settings.get("saturday_rules", {})
+
+    return jsonify({
+        "ok": True,
+        "rows": rows,
+        "is_saturday": date_value.weekday() == 5,
+        "saturday_is_leave_for_date": _is_saturday_leave(date_value, saturday_rules),
+    })
 
 
 @app.route("/attendance/mark-all-present", methods=["POST"])
@@ -562,15 +817,26 @@ def attendance_percentage_range():
     if from_date > to_date:
         return jsonify({"ok": False, "message": "from_date cannot be greater than to_date."}), 400
 
+    settings = _get_portal_settings()
+    effective_from, effective_to = _apply_semester_boundaries(from_date, to_date, settings)
+
+    if effective_from is None or effective_to is None:
+        return jsonify({
+            "ok": False,
+            "message": "Selected range is outside the semester range set by principal.",
+        }), 400
+
+    saturday_rules = settings.get("saturday_rules", {})
+
     valid_dates = {
         datetime.combine(date_item, datetime.min.time())
-        for date_item in _daterange_days(from_date, to_date)
-        if not _is_sunday(date_item)
+        for date_item in _daterange_days(effective_from, effective_to)
+        if not _is_excluded_day(date_item, saturday_rules)
     }
     total_hours = len(valid_dates) * len(period_options)
 
     if total_hours == 0:
-        return jsonify({"ok": False, "message": "Selected range contains only Sundays. No working days to calculate."}), 400
+        return jsonify({"ok": False, "message": "Selected range has no working days (Sundays and Saturday leave days are excluded)."}), 400
 
     rows = []
     for doc in attendances_collection.find({}, {"_id": 0}):
@@ -604,14 +870,16 @@ def attendance_percentage_range():
 
     return jsonify({
         "ok": True,
-        "from_date": from_date_text,
-        "to_date": to_date_text,
+        "from_date": effective_from.strftime("%Y-%m-%d"),
+        "to_date": effective_to.strftime("%Y-%m-%d"),
+        "semester_start": settings.get("semester_start", ""),
+        "semester_end": settings.get("semester_end", ""),
         "rows": rows,
     })
 
 
 @app.route("/attendance/chart/<int:student_id>")
-@login_required
+@hod_required
 def student_chart(student_id):
     """Generate a pie chart for a specific student's attendance"""
     import os
@@ -626,6 +894,9 @@ def student_chart(student_id):
 
     from_date = None
     to_date = None
+    settings = _get_portal_settings()
+    saturday_rules = settings.get("saturday_rules", {})
+
     if from_date_text or to_date_text:
         if not from_date_text or not to_date_text:
             return jsonify({"ok": False, "message": "Both from_date and to_date are required."}), 400
@@ -638,6 +909,18 @@ def student_chart(student_id):
         if from_date > to_date:
             return jsonify({"ok": False, "message": "from_date cannot be greater than to_date."}), 400
 
+        effective_from, effective_to = _apply_semester_boundaries(from_date, to_date, settings)
+        if effective_from is None or effective_to is None:
+            return jsonify({
+                "ok": False,
+                "message": "Selected range is outside the semester range set by principal.",
+            }), 400
+
+        from_date = effective_from
+        to_date = effective_to
+        from_date_text = from_date.strftime("%Y-%m-%d")
+        to_date_text = to_date.strftime("%Y-%m-%d")
+
     status_counts = {"present": 0, "absent": 0, "late": 0}
     for entry in student.get("attendance", []):
         entry_date = entry.get("date")
@@ -647,7 +930,7 @@ def student_chart(student_id):
             entry_day = entry_date.date()
             if entry_day < from_date or entry_day > to_date:
                 continue
-            if _is_sunday(entry_day):
+            if _is_excluded_day(entry_day, saturday_rules):
                 continue
 
         status = entry.get("status", "absent")
@@ -695,7 +978,7 @@ def student_chart(student_id):
 
 
 @app.route("/attendance/chart-page")
-@login_required
+@hod_required
 def chart_page():
     """Render page to select student and view chart"""
     students = list(attendances_collection.find({}, {"_id": 0, "Id": 1, "Name": 1}))
@@ -751,11 +1034,19 @@ def eight_hour_stats():
     """Get statistics on students with 8 or more hours (days) of attendance"""
     documents = list(attendances_collection.find({}, {"_id": 0}))
     stats = []
+    settings = _get_portal_settings()
+    semester_start = _parse_iso_date(settings.get("semester_start"))
+    semester_end = _parse_iso_date(settings.get("semester_end"))
+    saturday_rules = settings.get("saturday_rules", {})
     
     for doc in documents:
         student_id = doc.get("Id", "")
         name = doc.get("Name", "")
-        attendance_records = doc.get("attendance", [])
+        attendance_records = [
+            entry
+            for entry in doc.get("attendance", [])
+            if _entry_in_settings_window(entry, semester_start, semester_end, saturday_rules)
+        ]
         
         # Count present and late as valid attendance (8-hour equivalent)
         full_day_count = sum(1 for entry in attendance_records 
@@ -793,7 +1084,7 @@ def eight_hour_stats():
 def filter_by_hours():
     """Filter attendance records by minimum hours/days requirement"""
     payload = request.get_json(silent=True) or {}
-    min_days = payload.get("min_days", 8)  # Default to 8 days
+    min_days = payload.get("min_days", 8)
     
     try:
         min_days = int(min_days)
@@ -802,11 +1093,19 @@ def filter_by_hours():
     
     documents = list(attendances_collection.find({}, {"_id": 0}))
     filtered_students = []
+    settings = _get_portal_settings()
+    semester_start = _parse_iso_date(settings.get("semester_start"))
+    semester_end = _parse_iso_date(settings.get("semester_end"))
+    saturday_rules = settings.get("saturday_rules", {})
     
     for doc in documents:
         student_id = doc.get("Id", "")
         name = doc.get("Name", "")
-        attendance_records = doc.get("attendance", [])
+        attendance_records = [
+            entry
+            for entry in doc.get("attendance", [])
+            if _entry_in_settings_window(entry, semester_start, semester_end, saturday_rules)
+        ]
         
         # Count full days (present or late)
         full_day_count = sum(1 for entry in attendance_records 
@@ -827,6 +1126,6 @@ def filter_by_hours():
         "total_meeting_requirement": len(filtered_students)
     })
 
-
+#testing only use run_waitress
 if __name__=="__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

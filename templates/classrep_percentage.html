@@ -56,7 +56,6 @@
 			cursor: pointer;
 		}
 		.btn-att { background: linear-gradient(135deg, #2aa39b 0%, #17837d 100%); }
-		.btn-chart { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
 		.btn-export { background: linear-gradient(135deg, #f0a64b 0%, #e57a4c 100%); }
 		.btn-calc { background: linear-gradient(135deg, #7f5af0 0%, #6b4ad4 100%); }
 		.btn-logout { background: #dc3545; }
@@ -105,7 +104,6 @@
 			</div>
 			<div class="actions">
 				<a class="btn btn-att" href="{{ url_for('classrep_dashboard') }}">Attendance</a>
-				<a class="btn btn-chart" href="{{ url_for('chart_page') }}">Charts</a>
 				<a class="btn btn-logout" href="{{ url_for('logout') }}">Logout</a>
 			</div>
 		</section>
@@ -114,11 +112,11 @@
 			<div class="controls">
 				<label>
 					From Date
-					<input id="fromDate" type="date">
+					<input id="fromDate" type="date" value="{{ settings.semester_start }}">
 				</label>
 				<label>
 					To Date
-					<input id="toDate" type="date">
+					<input id="toDate" type="date" value="{{ settings.semester_end }}">
 				</label>
 				<div class="actions">
 					<button id="calcPercentageBtn" class="btn btn-calc" type="button">Calculate Percentage</button>
@@ -149,6 +147,14 @@
 		const todayStr = new Date().toISOString().slice(0, 10);
 		fromDate.value = todayStr;
 		toDate.value = todayStr;
+
+		if ("{{ settings.semester_start }}") {
+			fromDate.value = "{{ settings.semester_start }}";
+		}
+		if ("{{ settings.semester_end }}") {
+			toDate.value = "{{ settings.semester_end }}";
+		}
+
 
 		function renderPercentageRows(rowsData) {
 			if (!rowsData || rowsData.length === 0) {
@@ -211,6 +217,9 @@
 			}
 
 			percentageMeta.textContent = `Range: ${result.from_date} to ${result.to_date}`;
+			if (result.semester_start && result.semester_end) {
+				percentageMeta.textContent += ` | Semester: ${result.semester_start} to ${result.semester_end}`;
+			}
 			latestPercentageRows = result.rows || [];
 			latestPercentageFromDate = result.from_date || selectedFromDate;
 			latestPercentageToDate = result.to_date || selectedToDate;
