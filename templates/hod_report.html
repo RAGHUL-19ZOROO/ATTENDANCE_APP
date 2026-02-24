@@ -1,349 +1,220 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html>
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Attendance Percentage</title>
-<script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
-	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<title>HOD Report</title>
 
-	<style>
-		body {
-			margin: 0;
-			font-family: Poppins, sans-serif;
-			background: linear-gradient(135deg, #0f172a, #1e3a8a);
-			color: #fff;
-			min-height: 100vh;
-			padding: 40px;
-		}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
-		.card {
-			background: rgba(255, 255, 255, 0.08);
-			backdrop-filter: blur(18px);
-			border: 1px solid rgba(255, 255, 255, 0.18);
-			border-radius: 18px;
-			padding: 25px;
-			max-width: 1100px;
-			margin: auto;
-		}
+<style>
+body{
+    margin:0;
+    font-family:Poppins;
+    background:linear-gradient(135deg,#0f172a,#1e3a8a);
+    color:white;
+    display:flex;
+}
 
-		input {
-			padding: 10px;
-			border-radius: 10px;
-			border: 1px solid rgba(255, 255, 255, 0.2);
-			background: rgba(255, 255, 255, 0.1);
-			color: #fff;
-		}
+/* SIDEBAR */
+.sidebar{
+    width:230px;
+    background:rgba(0,0,0,0.35);
+    backdrop-filter:blur(20px);
+    padding:25px;
+    height:100vh;
+}
 
-		button {
-			padding: 10px 16px;
-			border: none;
-			border-radius: 10px;
-			background: #6366f1;
-			color: #fff;
-			font-weight: 600;
-			margin-right: 8px;
-			cursor: pointer;
-		}
+.sidebar h2{margin-top:0}
 
-		button:hover {
-			opacity: 0.85;
-		}
+.sidebar a{
+    display:block;
+    color:white;
+    text-decoration:none;
+    padding:12px;
+    border-radius:10px;
+    margin-bottom:8px;
+}
+.sidebar a:hover{background:rgba(255,255,255,0.1)}
 
-		table {
-			width: 100%;
-			border-collapse: collapse;
-			margin-top: 20px;
-		}
+/* MAIN */
+.main{
+    flex:1;
+    padding:40px;
+}
+button{
+    background:linear-gradient(135deg,#6366f1,#4f46e5);
+    border:none;
+    padding:10px 18px;
+    border-radius:10px;
+    color:white;
+    font-weight:600;
+    cursor:pointer;
+    transition:0.3s;
+}
 
-		th,
-		td {
-			padding: 12px;
-			border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-		}
+button:hover{
+    transform:translateY(-2px);
+    box-shadow:0 8px 20px rgba(0,0,0,0.3);
+}
 
-		th {
-			text-transform: uppercase;
-			font-size: 12px;
-		}
+input[type="checkbox"]{
+    transform:scale(1.1);
+    margin-right:5px;
+}
 
-		.note {
-			margin-top: 15px;
-			color: #cbd5f5;
-		}
-	</style>
+/* CARD */
+.card{
+    background:rgba(255,255,255,0.08);
+    border-radius:18px;
+    padding:25px;
+    margin-bottom:20px;
+}
+
+/* TABLE */
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+th,td{
+    padding:12px;
+    border-bottom:1px solid rgba(255,255,255,0.2);
+}
+</style>
 </head>
 
 <body>
-	<div class="card">
 
-		<h2>Attendance Percentage</h2>
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <h2>LEE ATTENDANCE</h2>
 
-		From: <input type="date" id="fromDate">
-		To: <input type="date" id="toDate">
-		<button id="calcPercentageBtn">Calculate</button>
+    <a href="{{ url_for('hod_dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('hod_report_page') }}">Reports</a>
+    <a href="{{ url_for('chart_page') }}">Charts</a>
+    <a href="{{ url_for('logout') }}">Logout</a>
+</div>
 
-		<div id="percentageMeta" class="note"></div>
-		<div id="percentageOutput"></div>
+<!-- MAIN -->
+<div class="main">
 
-		<div style="margin-top:15px;">
-			<button id="exportCsvBtn">CSV</button>
-			<button id="exportExcelBtn">Excel</button>
-			<button id="exportPdfBtn">PDF</button>
-		</div>
+<h2>Attendance Report</h2>
 
-	</div>
-	<script>
-		const REPORT_HEADER = {
-			collegeName: "P.T. LEE CHENGALVARAYA NAICKER COLLEGE OF ENGINEERING & TECHNOLOGY",
-			address: "Kanchipuram, Tamil Nadu - 631502",
-			dept: "AI & DS - 2nd Year",
-			logo: "/static/images/logo.png"
-		};
-	</script>
+<div class="card">
 
-	<script>
-		const fromDate = document.getElementById("fromDate");
-		const toDate = document.getElementById("toDate");
-		const calcPercentageBtn = document.getElementById("calcPercentageBtn");
-		const exportCsvBtn = document.getElementById("exportCsvBtn");
-		const exportExcelBtn = document.getElementById("exportExcelBtn");
-		const exportPdfBtn = document.getElementById("exportPdfBtn");
-		const percentageOutput = document.getElementById("percentageOutput");
-		const percentageMeta = document.getElementById("percentageMeta");
+<form method="GET">
+Date:
+<input type="date" name="date" value="{{ selected_date }}">
 
-		let latestPercentageRows = [];
-		let latestPercentageFromDate = "";
-		let latestPercentageToDate = "";
+<br><br>
 
-		const todayStr = new Date().toISOString().slice(0, 10);
-		fromDate.value = todayStr;
-		toDate.value = todayStr;
+<label><input type="checkbox" name="period" value="all"> All</label>
 
-		function renderPercentageRows(rowsData) {
-			if (!rowsData || rowsData.length === 0) {
-				percentageOutput.innerHTML = "<p class='note'>No records found for the selected range.</p>";
-				return;
-			}
+{% for p in range(1,9) %}
+<label>
+<input type="checkbox" name="period" value="{{p}}"
+{% if p in selected_periods %}checked{% endif %}>
+{{p}}
+</label>
+{% endfor %}
 
-			const html = `
-    <table>
-    <thead>
-    <tr>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Present Hours</th>
-        <th>Total Hours</th>
-        <th>Percentage</th>
-    </tr>
-    </thead>
-    <tbody>
-    ${rowsData.map(row => `
-        <tr>
-            <td>${row.Id ?? ""}</td>
-            <td>${row.Name ?? ""}</td>
-            <td>${row.present_hours ?? 0}</td>
-            <td>${row.total_hours ?? 0}</td>
-            <td>${row.percentage ?? 0}%</td>
-        </tr>
-    `).join("")}
-    </tbody>
-    </table>`;
-			percentageOutput.innerHTML = html;
-		}
+<br><br>
+<button type="submit">Load</button>
+</form>
 
-		async function calculateRangePercentage() {
-			const selectedFromDate = fromDate.value.trim();
-			const selectedToDate = toDate.value.trim() || todayStr;
+</div>
 
-			if (!selectedFromDate) {
-				alert("Please select From Date.");
-				return;
-			}
+<div class="card">
+<button onclick="exportCSV()">CSV</button>
+<button onclick="exportExcel()">Excel</button>
+<button onclick="exportPDF()">PDF</button>
+</div>
 
-			const response = await fetch("/attendance/percentage-range", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					from_date: selectedFromDate,
-					to_date: selectedToDate
-				})
-			});
+<div class="card">
 
-			const result = await response.json().catch(() => ({}));
-			if (!response.ok || !result.ok) {
-				alert(result.message || "Failed to calculate percentage.");
-				return;
-			}
+<table>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Attendance</th>
+<th>Absent</th>
+<th>%</th>
+</tr>
 
-			percentageMeta.textContent = `Range: ${result.from_date} to ${result.to_date}`;
-			latestPercentageRows = result.rows || [];
-			latestPercentageFromDate = result.from_date;
-			latestPercentageToDate = result.to_date;
+{% for r in rows %}
+<tr>
+<td>{{ r.Id }}</td>
+<td>{{ r.Name }}</td>
+<td><b>{{ r.present }}/{{ r.total }}</b></td>
+<td>{{ r.absent }}</td>
+<td>{{ r.percentage }}%</td>
+</tr>
+{% endfor %}
 
-			renderPercentageRows(latestPercentageRows);
-		}
+</table>
 
-		/* ================= EXPORT FUNCTIONS ================= */
+</div>
 
-		function ensureExportReady() {
-			if (!latestPercentageRows.length) {
-				alert("Please calculate percentage first.");
-				return false;
-			}
-			return true;
-		}
+</div>
 
-		/* CSV EXPORT */
-		function exportAsCsv() {
-			if (!ensureExportReady()) return;
+<script>
+function getTableData(){
+    const rows = [];
+    document.querySelectorAll("table tr").forEach((tr,i)=>{
+        if(i==0) return;
+        const td = tr.querySelectorAll("td");
+        rows.push({
+            id:td[0].innerText,
+            name:td[1].innerText,
+            att:td[2].innerText,
+            abs:td[3].innerText,
+            per:td[4].innerText
+        });
+    });
+    return rows;
+}
 
-			let lines = [];
+function download(content,name,type){
+    const blob=new Blob([content],{type});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=name;
+    a.click();
+}
 
-			lines.push(REPORT_HEADER.collegeName);
-			lines.push(REPORT_HEADER.address);
-			lines.push("Attendance Report");
-			lines.push("Department: " + REPORT_HEADER.dept);
-			lines.push("Range: " + latestPercentageFromDate + " to " + latestPercentageToDate);
-			lines.push("");
+/* CSV */
+function exportCSV(){
+    const d=getTableData();
+    let lines=["ID,Name,Attendance,Absent,Percentage"];
+    d.forEach(r=>lines.push(`${r.id},${r.name},${r.att},${r.abs},${r.per}`));
+    download(lines.join("\n"),"report.csv","text/csv");
+}
 
-			lines.push("ID,Name,Present Hours,Total Hours,Percentage");
+/* EXCEL */
+function exportExcel(){
+    const d=getTableData();
+    let html="<table border=1>";
+    html+="<tr><th>ID</th><th>Name</th><th>Attendance</th><th>Absent</th><th>%</th></tr>";
+    d.forEach(r=>{
+        html+=`<tr><td>${r.id}</td><td>${r.name}</td><td>${r.att}</td><td>${r.abs}</td><td>${r.per}</td></tr>`;
+    });
+    html+="</table>";
+    download(html,"report.xls","application/vnd.ms-excel");
+}
 
-			latestPercentageRows.forEach(row => {
-				lines.push(`${row.Id},${row.Name},${row.present_hours},${row.total_hours},${row.percentage}%`);
-			});
-
-			downloadFile(lines.join("\n"), "attendance_report.csv", "text/csv");
-		}
-		/* EXCEL EXPORT */
-		function exportAsExcel() {
-			if (!ensureExportReady()) return;
-
-			let table = `
-    <table border="0">
-    <tr>
-        <td colspan="5" align="center">
-            <img src="${REPORT_HEADER.logo}" width="60"><br>
-            <b>${REPORT_HEADER.collegeName}</b><br>
-            ${REPORT_HEADER.address}<br><br>
-            <b>Attendance Report</b><br>
-            ${REPORT_HEADER.dept}<br>
-            Range: ${latestPercentageFromDate} to ${latestPercentageToDate}
-        </td>
-    </tr>
-    </table>
-
-    <br>
-
-    <table border="1">
-    <tr>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Present Hours</th>
-        <th>Total Hours</th>
-        <th>Percentage</th>
-    </tr>
-    ${latestPercentageRows.map(row => `
-        <tr>
-            <td>${row.Id}</td>
-            <td>${row.Name}</td>
-            <td>${row.present_hours}</td>
-            <td>${row.total_hours}</td>
-            <td>${row.percentage}%</td>
-        </tr>
-    `).join("")}
-    </table>
-    `;
-
-			downloadFile(table, "attendance_report.xls", "application/vnd.ms-excel");
-		}
-
-		/* PDF EXPORT */
-		function exportAsPdf() {
-			if (!ensureExportReady()) return;
-
-			const win = window.open("", "", "width=900,height=700");
-
-			const rows = latestPercentageRows.map(row => `
-        <tr>
-            <td>${row.Id}</td>
-            <td>${row.Name}</td>
-            <td>${row.present_hours}</td>
-            <td>${row.total_hours}</td>
-            <td>${row.percentage}%</td>
-        </tr>
-    `).join("");
-
-			win.document.write(`
-    <html>
-    <head>
-    <title>Attendance Report</title>
-    <style>
-    body{font-family:Arial;padding:20px;text-align:center;}
-    table{width:100%;border-collapse:collapse;margin-top:20px;}
-    th,td{border:1px solid #ccc;padding:8px;}
-    th{background:#f2f2f2;}
-    </style>
-    </head>
-    <body>
-
-    <img src="${REPORT_HEADER.logo}" width="70"><br>
-    <h2>${REPORT_HEADER.collegeName}</h2>
-    <div>${REPORT_HEADER.address}</div>
-    <h3>Attendance Report</h3>
-    <div>${REPORT_HEADER.dept}</div>
-    <div>Range: ${latestPercentageFromDate} to ${latestPercentageToDate}</div>
-
-    <table>
-    <tr>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Present Hours</th>
-        <th>Total Hours</th>
-        <th>Percentage</th>
-    </tr>
-    ${rows}
-    </table>
-
-    </body>
-    </html>
-    `);
-
-			win.document.close();
-			win.print();
-		}
-
-		/* FILE DOWNLOAD HELPER */
-		function downloadFile(content, filename, type) {
-			const blob = new Blob([content], { type: type });
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement("a");
-			a.href = url;
-			a.download = filename;
-			document.body.appendChild(a);
-			a.click();
-			document.body.removeChild(a);
-			URL.revokeObjectURL(url);
-		}
-
-		/* ================= BUTTON EVENTS ================= */
-
-		calcPercentageBtn.addEventListener("click", calculateRangePercentage);
-
-		exportCsvBtn.addEventListener("click", () => {
-			if (ensureExportReady()) exportAsCsv();
-		});
-
-		exportExcelBtn.addEventListener("click", () => {
-			if (ensureExportReady()) exportAsExcel();
-		});
-
-		exportPdfBtn.addEventListener("click", () => {
-			if (ensureExportReady()) exportAsPdf();
-		});
-	</script>
+/* PDF */
+function exportPDF(){
+    const d=getTableData();
+    const win=window.open("");
+    win.document.write("<h2>Attendance Report</h2>");
+    win.document.write("<table border=1 style='width:100%;border-collapse:collapse'>");
+    win.document.write("<tr><th>ID</th><th>Name</th><th>Attendance</th><th>Absent</th><th>%</th></tr>");
+    d.forEach(r=>{
+        win.document.write(`<tr><td>${r.id}</td><td>${r.name}</td><td>${r.att}</td><td>${r.abs}</td><td>${r.per}</td></tr>`);
+    });
+    win.document.write("</table>");
+    win.print();
+}
+</script>
 
 </body>
-
 </html>

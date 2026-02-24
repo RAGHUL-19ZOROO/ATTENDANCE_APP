@@ -552,31 +552,19 @@ def _build_hod_dashboard_data(date_text, selected_period=None, percentage_filter
 @app.route("/hod/dashboard")
 @hod_required
 def hod_dashboard():
-    date_text = request.args.get("date")
-    selected_period = _parse_period(request.args.get("period"))
-    percentage_filter = _parse_percentage_filter(request.args.get("percentage"))
+    date_text = datetime.now().strftime("%Y-%m-%d")
 
-    if not date_text:
-        date_text = datetime.now().strftime("%Y-%m-%d")
-
-    try:
-        dashboard_data = _build_hod_dashboard_data(date_text, selected_period=selected_period, percentage_filter=percentage_filter)
-    except ValueError:
-        date_text = datetime.now().strftime("%Y-%m-%d")
-        dashboard_data = _build_hod_dashboard_data(date_text, selected_period=selected_period, percentage_filter=percentage_filter)
+    data = _build_hod_main_dashboard(date_text)
 
     return render_template(
         "hod_dashboard.html",
         selected_date=date_text,
-        selected_period=selected_period,
-        selected_percentage=percentage_filter,
-        period_options=period_options,
-        percentage_options=percentage_filter_options.items(),
-        rows=dashboard_data["rows"],
-        total_students=dashboard_data["total_students"],
-        present_days=dashboard_data["present_days"],
-        absent_days=dashboard_data["absent_days"],
-        overall_percentage=dashboard_data["overall_percentage"],
+        total_students=data["total_students"],
+        present_today=data["present_today"],
+        absent_today=data["absent_today"],
+        today_absentees=data["today_absentees"],
+        long_absentees=data["long_absentees"],
+        live_period=data["live_period"]
     )
 
 @app.route("/attendance/update", methods=["POST"])
@@ -1135,15 +1123,169 @@ def filter_by_hours():
         "min_days_required": min_days,
         "total_meeting_requirement": len(filtered_students)
     })
-@app.route("/hod-report")
+@app.route("/hod/report")
+@hod_required
 def hod_report_page():
-    rows = attendance_percentage_range()  # use your existing function
+
+    date_text = request.args.get("date") or datetime.now().strftime("%Y-%m-%d")
+    selected_periods = request.args.getlist("period")
+
+    if not selected_periods or "all" in selected_periods:
+        selected_periods = list(range(1,9))
+    else:
+        selected_periods = [int(p) for p in selected_periods]
+
+    attendance_date = datetime.strptime(date_text,"%Y-%m-%d")
+
+    rows = []
+
+    for doc in attendances_collection.find({}, {"_id":0}):
+
+        present = 0
+        absent = 0
+
+        for period in selected_periods:
+            found = False
+
+            for entry in doc.get("attendance",[]):
+                if entry.get("date")==attendance_date and entry.get("period")==period:
+                    found = True
+                    if entry.get("status") in ["present","late"]:
+                        present += 1
+                    else:
+                        absent += 1
+                    break
+
+            if not found:
+                absent += 1
+
+        total = len(selected_periods)
+        percentage = round((present/total)*100,2) if total else 0
+
+        rows.append({
+            "Id": doc.get("Id"),
+            "Name": doc.get("Name"),
+            "present": present,
+            "total": total,
+            "absent": absent,
+            "percentage": percentage
+        })
+
     return render_template(
         "hod_report.html",
         rows=rows,
-        selected_date=request.args.get("date")
+        selected_date=date_text,
+        selected_periods=selected_periods
     )
+    
+def _build_hod_main_dashboard(date_text):
+    attendance_date = datetime.strptime(date_text, "%Y-%m-%d")
 
+    total_students = attendances_collection.count_documents({})
+
+    today_absentees = []
+    long_absentees = []
+
+    total_present_today = 0
+    latest_period_today = 1
+
+    # 🔵 STEP 1: detect latest marked period today
+    for doc in attendances_collection.find({}, {"_id":0,"attendance":1}):
+        for entry in doc.get("attendance", []):
+            if entry.get("date") == attendance_date:
+                p = entry.get("period",1)
+                if p > latest_period_today:
+                    latest_period_today = p
+
+    # if no attendance yet → show period 1
+    if latest_period_today < 1:
+        latest_period_today = 1
+
+    # 🔵 STEP 2: calculate live stats only upto latest period
+    for doc in attendances_collection.find({}, {"_id":0}):
+
+        student_id = doc.get("Id")
+        name = doc.get("Name")
+        attendance_list = doc.get("attendance", [])
+
+        present_today = 0
+        absent_today = 0
+
+        for period in range(1, latest_period_today+1):
+            found = False
+
+            for entry in attendance_list:
+                if entry.get("date") == attendance_date and entry.get("period",1) == period:
+                    found = True
+                    if entry.get("status") in ["present","late"]:
+                        present_today += 1
+                    else:
+                        absent_today += 1
+                    break
+
+            if not found:
+                absent_today += 1
+
+        # if student absent in ALL marked periods
+        if present_today == 0:
+            today_absentees.append({
+                "Id": student_id,
+                "Name": name
+            })
+        else:
+            total_present_today += 1
+
+        # 🔵 LONG ABSENTEES (>=3 days)
+        absent_days = 0
+        days_checked = set()
+
+        for entry in attendance_list:
+            date_val = entry.get("date")
+            if not date_val:
+                continue
+
+            day = date_val.date()
+            if day in days_checked:
+                continue
+
+            days_checked.add(day)
+
+            # check full day absent
+            day_present = False
+
+            for p in range(1,9):
+                for e in attendance_list:
+                    if e.get("date") == datetime.combine(day, datetime.min.time()) and e.get("period",1)==p:
+                        if e.get("status") in ["present","late"]:
+                            day_present = True
+                            break
+                if day_present:
+                    break
+
+            if not day_present:
+                absent_days += 1
+
+        if absent_days >= 3:
+            long_absentees.append({
+                "Id": student_id,
+                "Name": name,
+                "days": absent_days
+            })
+
+    return {
+        "total_students": total_students,
+        "present_today": total_present_today,
+        "absent_today": total_students - total_present_today,
+        "today_absentees": today_absentees,
+        "long_absentees": long_absentees,
+        "live_period": latest_period_today   # 🔵 for UI
+    }
+@app.route("/hod/live-data")
+@hod_required
+def hod_live_data():
+    date_text = datetime.now().strftime("%Y-%m-%d")
+    data = _build_hod_main_dashboard(date_text)
+    return jsonify(data)
 #testing only use run_waitress
 if __name__=="__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
