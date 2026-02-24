@@ -1,13 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Principal Settings</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+	<link
+		href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+		rel="stylesheet">
 	<style>
+		:root {
+			--bg: #0b1118;
+			--card: rgba(12, 18, 26, 0.75);
+			--text: #e6edf6;
+			--muted: #9fb0c1;
+			--border: rgba(255, 255, 255, 0.08);
+		}
+
+		/* LIGHT MODE */
+		body.light {
+			--bg: #f5f7fb;
+			--card: #ffffff;
+			--text: #0f172a;
+			--muted: #64748b;
+			--border: #e5e7eb;
+		}
+		body{
+    background:var(--bg);
+    color:var(--text);
+    transition:0.3s;
+}
+.card{
+    background:var(--card);
+    border:1px solid var(--border);
+}
+.theme-btn{
+    border:none;
+    padding:8px 14px;
+    border-radius:10px;
+    background:linear-gradient(135deg,#667eea,#764ba2);
+    color:#fff;
+    font-weight:600;
+    cursor:pointer;
+}
+
 		:root {
 			--ink: #e6edf6;
 			--muted: #9fb0c1;
@@ -18,7 +56,11 @@
 			--teal: #2aa39b;
 			--danger: #dc3545;
 		}
-		* { box-sizing: border-box; }
+
+		* {
+			box-sizing: border-box;
+		}
+
 		body {
 			font-family: "Rubik", "Space Grotesk", sans-serif;
 			color: var(--ink);
@@ -30,7 +72,14 @@
 				linear-gradient(135deg, #05070b 0%, #0b1118 45%, #101a24 100%);
 			padding: 28px 18px 60px;
 		}
-		.shell { max-width: 860px; margin: 0 auto; display: grid; gap: 20px; }
+
+		.shell {
+			max-width: 860px;
+			margin: 0 auto;
+			display: grid;
+			gap: 20px;
+		}
+
 		.card {
 			background: var(--surface);
 			border: 1px solid var(--line);
@@ -40,10 +89,30 @@
 			backdrop-filter: blur(18px);
 			-webkit-backdrop-filter: blur(18px);
 		}
-		.hero { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-		.hero h1 { margin: 0; font-size: 1.3rem; }
-		.hero p { margin: 6px 0 0; color: var(--muted); }
-		.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+		.hero {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 12px;
+		}
+
+		.hero h1 {
+			margin: 0;
+			font-size: 1.3rem;
+		}
+
+		.hero p {
+			margin: 6px 0 0;
+			color: var(--muted);
+		}
+
+		.actions {
+			display: flex;
+			gap: 8px;
+			flex-wrap: wrap;
+		}
+
 		.btn {
 			padding: 10px 14px;
 			border-radius: 10px;
@@ -53,8 +122,15 @@
 			border: none;
 			cursor: pointer;
 		}
-		.btn-save { background: linear-gradient(135deg, var(--teal) 0%, #17837d 100%); }
-		.btn-logout { background: var(--danger); }
+
+		.btn-save {
+			background: linear-gradient(135deg, var(--teal) 0%, #17837d 100%);
+		}
+
+		.btn-logout {
+			background: var(--danger);
+		}
+
 		label {
 			display: flex;
 			flex-direction: column;
@@ -63,12 +139,14 @@
 			font-size: 0.92rem;
 			font-weight: 600;
 		}
+
 		.controls {
 			display: grid;
 			grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 			gap: 12px;
 			align-items: end;
 		}
+
 		input[type="date"] {
 			padding: 10px 12px;
 			border: 1px solid var(--line);
@@ -76,16 +154,31 @@
 			background: rgba(11, 17, 24, 0.9);
 			color: var(--ink);
 		}
+
 		.message {
 			padding: 10px 12px;
 			border-radius: 10px;
 			font-size: 0.9rem;
 		}
-		.message-ok { background: rgba(42, 163, 155, 0.2); color: #7ff4ea; }
-		.message-error { background: rgba(220, 53, 69, 0.2); color: #ffc1c7; }
-		.note { color: var(--muted); font-size: 0.88rem; margin-top: 8px; }
+
+		.message-ok {
+			background: rgba(42, 163, 155, 0.2);
+			color: #7ff4ea;
+		}
+
+		.message-error {
+			background: rgba(220, 53, 69, 0.2);
+			color: #ffc1c7;
+		}
+
+		.note {
+			color: var(--muted);
+			font-size: 0.88rem;
+			margin-top: 8px;
+		}
 	</style>
 </head>
+
 <body>
 	<div class="shell">
 		<section class="card hero">
@@ -96,6 +189,7 @@
 			<div class="actions">
 				<a class="btn btn-logout" href="{{ url_for('logout') }}">Logout</a>
 			</div>
+			<button onclick="toggleTheme()" class="theme-btn">🌙</button>
 		</section>
 
 		<section class="card">
@@ -124,5 +218,20 @@
 			<div class="note">Class Rep controls Saturday leave preference from Attendance dashboard.</div>
 		</section>
 	</div>
+	<script>
+function toggleTheme(){
+    document.body.classList.toggle("light");
+    localStorage.setItem("theme",
+        document.body.classList.contains("light") ? "light":"dark"
+    );
+}
+
+window.onload = function(){
+    if(localStorage.getItem("theme")==="light"){
+        document.body.classList.add("light");
+    }
+}
+</script>
 </body>
+
 </html>

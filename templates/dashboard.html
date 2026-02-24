@@ -1,443 +1,326 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Attendance Dashboard</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
-	<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/logo.png') }}">
-	<link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='images/logo.png') }}">
-	<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/logo.png') }}">
-	<style>
-		:root {
-			--ink: #e6edf6;
-			--muted: #9fb0c1;
-			--surface: rgba(12, 18, 26, 0.75);
-			--surface-strong: rgba(12, 18, 26, 0.88);
-			--accent: #f0a64b;
-			--accent-strong: #e57a4c;
-			--teal: #2aa39b;
-			--teal-strong: #17837d;
-			--line: rgba(255, 255, 255, 0.08);
-			--shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
-		}
-		* {
-			box-sizing: border-box;
-		}
-		body {
-			font-family: "Rubik", "Space Grotesk", sans-serif;
-			color: var(--ink);
-			margin: 0;
-			min-height: 100vh;
-			background:
-				radial-gradient(circle at 10% 20%, rgba(240, 166, 75, 0.16), transparent 55%),
-				radial-gradient(circle at 90% 10%, rgba(42, 163, 155, 0.16), transparent 50%),
-				linear-gradient(135deg, #05070b 0%, #0b1118 45%, #101a24 100%);
-			padding: 28px 18px 60px;
-		}
-		.shell {
-			max-width: 1120px;
-			margin: 0 auto;
-			display: grid;
-			gap: 22px;
-		}
-		.hero {
-			background: var(--surface);
-			backdrop-filter: blur(22px);
-			-webkit-backdrop-filter: blur(22px);
-			border-radius: 22px;
-			padding: 22px 26px;
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			gap: 20px;
-			border: 1px solid var(--line);
-			box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.953);
-		}
-		.hero-left {
-			display: flex;
-			align-items: center;
-			gap: 18px;
-		}
-		.hero img {
-			width: 72px;
-			height: 72px;
-			border-radius: 18px;
-			object-fit: contain;
-			background: rgba(255, 255, 255, 0.08);
-			padding: 10px;
-		}
-		.hero h1 {
-			margin: 0;
-			font-size: 1.4rem;
-			font-weight: 700;
-		}
-		.hero p {
-			margin: 6px 0 0;
-			font-size: 0.95rem;
-			color: var(--muted);
-		}
-		.hero-tag {
-			font-family: "Space Grotesk", sans-serif;
-			font-weight: 600;
-			padding: 10px 14px;
-			border-radius: 999px;
-			background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-			color: #ffffff;
-			letter-spacing: 0.4px;
-			text-transform: uppercase;
-			font-size: 0.8rem;
-			white-space: nowrap;
-		}
-		.filters {
-			background: var(--surface);
-			backdrop-filter: blur(18px);
-			-webkit-backdrop-filter: blur(18px);
-			border-radius: 20px;
-			padding: 18px 20px 8px;
-			box-shadow: var(--shadow);
-			border: 1px solid var(--line);
-		}
-		.filters h3 {
-			margin: 0 0 16px;
-			font-size: 1rem;
-			font-weight: 600;
-		}
-		.controls {
-			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-			gap: 14px;
-			align-items: end;
-		}
-		.control-actions {
-			display: flex;
-			gap: 12px;
-			flex-wrap: wrap;
-			align-items: center;
-			grid-column: 1 / -1;
-		}
-		.control {
-			display: flex;
-			flex-direction: column;
-			gap: 8px;
-			font-size: 0.85rem;
-			font-weight: 600;
-			color: var(--muted);
-		}
-		.toggle-wrap {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-			font-size: 0.85rem;
-			font-weight: 600;
-			color: var(--muted);
-		}
-		.toggle-wrap input[type="checkbox"] {
-			width: 18px;
-			height: 18px;
-		}
-		.small-note {
-			font-size: 0.78rem;
-			color: var(--muted);
-		}
-		#saturdayLeaveControl {
-			display: none;
-			grid-column: 1 / -1;
-			padding: 10px 12px;
-			border: 1px solid var(--line);
-			border-radius: 12px;
-			background: rgba(11, 17, 24, 0.5);
-		}
-		.control select,
-		.control input {
-			padding: 10px 12px;
-			border: 1px solid var(--line);
-			border-radius: 12px;
-			font-size: 0.95rem;
-			font-weight: 500;
-			background: rgba(11, 17, 24, 0.9);
-			color: var(--ink);
-		}
-		#updateAllBtn {
-			padding: 12px 18px;
-			border: none;
-			border-radius: 14px;
-			background: linear-gradient(135deg, var(--teal) 0%, var(--teal-strong) 100%);
-			color: #ffffff;
-			font-weight: 600;
-			cursor: pointer;
-			transition: transform 0.2s ease, box-shadow 0.2s ease;
-			box-shadow: 0 12px 26px rgba(31, 138, 132, 0.25);
-		}
-		#updateAllBtn:hover {
-			transform: translateY(-2px);
-			box-shadow: 0 14px 30px rgba(31, 138, 132, 0.35);
-		}
-		.table-card {
-			background: var(--surface);
-			backdrop-filter: blur(18px);
-			-webkit-backdrop-filter: blur(18px);
-			border-radius: 22px;
-			padding: 14px;
-			box-shadow: var(--shadow);
-			border: 1px solid var(--line);
-			overflow-x: auto;
-		}
-		table {
-			width: 100%;
-			border-collapse: collapse;
-			background: transparent;
-			min-width: 420px;
-		}
-		th, td {
-			padding: 12px 14px;
-			text-align: left;
-			border-bottom: 1px solid var(--line);
-			font-size: 0.95rem;
-		}
-		th {
-			font-weight: 700;
-			letter-spacing: 0.3px;
-			color: var(--muted);
-			text-transform: uppercase;
-			font-size: 0.78rem;
-		}
-		tr:hover td {
-			background: rgba(244, 160, 58, 0.08);
-		}
-		.statusSelect {
-			padding: 8px 10px;
-			border-radius: 10px;
-			border: 1px solid var(--line);
-			font-weight: 600;
-			background: rgba(16, 24, 35, 0.9);
-			color: var(--ink);
-		}
-		.locked td {
-			color: var(--muted);
-		}
-		.locked .statusSelect {
-			background: rgba(16, 24, 35, 0.6);
-			color: #7f8fa3;
-			border-color: rgba(255, 255, 255, 0.06);
-		}
-		.empty {
-			text-align: center;
-			padding: 16px;
-			color: var(--muted);
-		}
-		.logout-btn {
-			padding: 8px 14px;
-			border: none;
-			border-radius: 10px;
-			background: #dc3545;
-			color: #ffffff;
-			font-weight: 600;
-			cursor: pointer;
-			font-size: 0.85rem;
-			text-decoration: none;
-			display: inline-block;
-			transition: background 0.2s ease;
-		}
-		.logout-btn:hover {
-			background: #c82333;
-		}
-		.chart-btn {
-			padding: 12px 18px;
-			border: none;
-			border-radius: 14px;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-			color: #ffffff;
-			font-weight: 600;
-			cursor: pointer;
-			transition: transform 0.2s ease, box-shadow 0.2s ease;
-			box-shadow: 0 12px 26px rgba(102, 126, 234, 0.25);
-			text-decoration: none;
-			display: inline-block;
-			text-align: center;
-		}
-		.chart-btn:hover {
-			transform: translateY(-2px);
-			box-shadow: 0 14px 30px rgba(102, 126, 234, 0.35);
-		}
-		#markAllPresentBtn {
-			padding: 12px 18px;
-			border: none;
-			border-radius: 14px;
-			background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-			color: #ffffff;
-			font-weight: 600;
-			cursor: pointer;
-			transition: transform 0.2s ease, box-shadow 0.2s ease;
-			box-shadow: 0 12px 26px rgba(76, 175, 80, 0.25);
-		}
-		#markAllPresentBtn:hover {
-			transform: translateY(-2px);
-			box-shadow: 0 14px 30px rgba(76, 175, 80, 0.35);
-		}
-		#copyPrevBtn {
-			padding: 12px 18px;
-			border: none;
-			border-radius: 14px;
-			background: linear-gradient(135deg, #7f5af0 0%, #6b4ad4 100%);
-			color: #ffffff;
-			font-weight: 600;
-			cursor: pointer;
-			transition: transform 0.2s ease, box-shadow 0.2s ease;
-			box-shadow: 0 12px 26px rgba(127, 90, 240, 0.25);
-		}
-		#copyPrevBtn:hover {
-			transform: translateY(-2px);
-			box-shadow: 0 14px 30px rgba(127, 90, 240, 0.35);
-		}
-		@media (max-width: 768px) {
-			.hero {
-				flex-direction: column;
-				align-items: flex-start;
-			}
-			.hero-left {
-				flex-direction: column;
-				align-items: flex-start;
-			}
-			.hero img {
-				width: 64px;
-				height: 64px;
-			}
-			.hero h1 {
-				font-size: 1.1rem;
-			}
-			.hero-tag {
-				align-self: flex-start;
-			}
-			.controls {
-				grid-template-columns: 1fr;
-			}
-			.control-actions {
-				flex-direction: column;
-				align-items: stretch;
-			}
-			#updateAllBtn,
-			#markAllPresentBtn,
-			#copyPrevBtn {
-				width: 100%;
-			}
-			.shell {
-				gap: 16px;
-			}
-			body {
-				padding: 20px 14px 40px;
-			}
-			table {
-				min-width: 320px;
-			}
-			th, td {
-				padding: 10px 10px;
-				font-size: 0.9rem;
-			}
-		}
-		.hero img {
-			background: rgba(255, 255, 255, 0.08);
-		}
-	</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Dashboard</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+    --glass:rgba(255,255,255,0.06);
+    --border:rgba(255,255,255,0.18);
+    --text:#ffffff;
+    --muted:#cbd5f5;
+    --primary:#6366f1;
+    --success:#10b981;
+    --danger:#ef4444;
+    --purple:#7c3aed;
+}
+
+/* ===== BODY ===== */
+body{
+    font-family:"Poppins",sans-serif;
+    margin:0;
+    padding:30px;
+    background:linear-gradient(135deg,#0f172a,#1e3a8a);
+    min-height:100vh;
+    color:var(--text);
+}
+
+/* ===== WRAPPER ===== */
+.shell{
+    max-width:1200px;
+    margin:auto;
+    display:grid;
+    gap:22px;
+}
+
+/* ===== HEADER ===== */
+.hero{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    color:#fff;
+}
+
+.hero-left{
+    display:flex;
+    align-items:center;
+    gap:16px;
+}
+
+.hero img{
+    width:65px;
+    height:65px;
+}
+
+.hero h1{
+    margin:0;
+    font-size:18px;
+    color:#fff;
+}
+
+.hero p{
+    margin:4px 0 0;
+    font-size:13px;
+    color:var(--muted);
+}
+
+.live-indicator{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:rgba(34,197,94,0.15);
+    color:#22c55e;
+    padding:8px 14px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+    border:1px solid rgba(34,197,94,0.4);
+}
+
+.ping{
+    width:10px;
+    height:10px;
+    background:#22c55e;
+    border-radius:50%;
+    position:relative;
+}
+
+.ping::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    background:#22c55e;
+    animation:ping 1.2s infinite;
+    opacity:0.6;
+}
+
+@keyframes ping{
+    0%{transform:scale(1);opacity:0.7;}
+    80%{transform:scale(2.5);opacity:0;}
+    100%{opacity:0;}
+}
+
+.logout-btn{
+    background:#ef4444;
+    color:#fff;
+    padding:8px 14px;
+    border-radius:10px;
+    text-decoration:none;
+    font-weight:600;
+}
+
+/* ===== GLASS CARDS ===== */
+.filters,
+.table-card{
+    background:var(--glass);
+    backdrop-filter:blur(18px);
+    border-radius:18px;
+    padding:22px;
+    border:1px solid var(--border);
+}
+
+/* FILTER CONTROLS */
+.controls{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:16px;
+}
+
+.control{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    font-size:13px;
+    color:var(--muted);
+    font-weight:500;
+}
+
+input,select{
+    padding:10px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.08);
+    color:#fff;
+}
+
+/* BUTTONS */
+.control-actions{
+    grid-column:1/-1;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+button{
+    padding:10px 16px;
+    border:none;
+    border-radius:10px;
+    font-weight:600;
+    color:#fff;
+    cursor:pointer;
+}
+
+#updateAllBtn{background:var(--primary);}
+#markAllPresentBtn{background:var(--success);}
+#copyPrevBtn{background:var(--purple);}
+
+/* ===== TABLE ===== */
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,td{
+    padding:13px;
+    border-bottom:1px solid rgba(255,255,255,0.15);
+}
+
+th{
+    text-transform:uppercase;
+    font-size:12px;
+    color:var(--muted);
+}
+
+tr:hover{
+    background:rgba(255,255,255,0.05);
+}
+
+.statusSelect{
+    padding:7px 10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.1);
+    color:#fff;
+}
+
+.empty{
+    text-align:center;
+    padding:18px;
+    color:var(--muted);
+}
+
+@media(max-width:768px){
+    .hero{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:12px;
+    }
+}
+</style>
 </head>
+
 <body>
-	<div class="shell">
-		<section class="hero">
-			<div class="hero-left">
-				<img src="{{ url_for('static', filename='/images/logo.png') }}" alt="Logo">
-				<div>
-					<h1>P.T. LEE CHENGALVARAYA NAICKER<br>COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
-					<p>Attendance Dashboard for daily roll call updates and quick auditing.</p>
-				</div>
-			</div>
-			<div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
-				<div class="hero-tag">Live Attendance</div>
-				<div style="display: flex; gap: 8px;">
-					<a href="{{ url_for('classrep_percentage_page') }}" class="logout-btn" style="background: linear-gradient(135deg, #7f5af0 0%, #6b4ad4 100%);"> Percentage</a>
-					<a href="/logout" class="logout-btn">Logout</a>
-				</div>
-			</div>
-		</section>
+<div class="shell">
 
-		<section class="filters">
-			<h3>Filter & Update</h3>
-			<div class="controls">
-				<label class="control">
-					Status
-					<select id="statusFilter">
-						<option value="all">All Status</option>
-						{% for status in status_options %}
-						<option value="{{ status }}">{{ status }}</option>
-						{% endfor %}
-					</select>
-				</label>
-				<label class="control">
-					Date
-					<input id="dateFilter" type="date">
-				</label>
-				<label class="control">
-					Period
-					<select id="periodFilter">
-						{% for period in period_options %}
-						<option value="{{ period }}">Period {{ period }}</option>
-						{% endfor %}
-					</select>
-				</label>
-				<label class="control">
-					Search
-					<input id="searchFilter" type="text" placeholder="Search any field...">
-				</label>
-				<div class="control" id="saturdayLeaveControl">
-					<label class="toggle-wrap" for="saturdayLeaveToggle">
-						<input id="saturdayLeaveToggle" type="checkbox">
-						Saturday Full Leave
-					</label>
-					<button id="saveSaturdayOptionBtn" type="button" class="chart-btn" style="padding: 10px 12px;">Save Saturday Option</button>
-					<div class="small-note">Used in percentage and result calculations.</div>
-				</div>
-				<div class="control-actions">
-					<button id="updateAllBtn" type="button">Update All</button>
-					<button id="markAllPresentBtn" type="button">Mark All Present</button>
-					<button id="copyPrevBtn" type="button">Use Previous Period</button>
-				</div>
-			</div>
-		</section>
+<section class="hero">
+<div class="hero-left">
+<img src="{{ url_for('static', filename='/images/logo.png') }}">
+<div>
+<h1>P.T. LEE CHENGALVARAYA NAICKER<br>COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
+<p>Attendance Dashboard</p>
+</div>
+</div>
 
-		<section class="table-card">
-			<table id="attendanceTable">
-				<thead>
-					<tr>
-						<th>ID</th>
-						<th>Name</th>
-						<th>Status</th>
-					</tr>
-				</thead>
-				<tbody>
-					{% if attendances and attendances|length > 0 %}
-						{% for row in attendances %}
-						<tr data-student="{{ row.get('Name', '') }}" data-status="{{ row.get('status', '') }}" data-original-status="{{ row.get('status', '') }}" data-id="{{ row.get('Id', '') }}" data-date="{{ row.get('date', row.get('Date', '')) }}" data-period="{{ row.get('period', 1) }}">
-							<td>{{ row.get('Id', '') }}</td>
-							<td>{{ row.get('Name', '') }}</td>
-							<td>
-								<select class="statusSelect">
-									{% for status in status_options %}
-									<option value="{{ status }}" {% if row.get('status', '') == status %}selected{% endif %}>{{ status }}</option>
-									{% endfor %}
-								</select>
-							</td>
-						</tr>
-						{% endfor %}
-					{% else %}
-						<tr>
-							<td class="empty" colspan="3">No attendance records found.</td>
-						</tr>
-					{% endif %}
-				</tbody>
-			</table>
-		</section>
-	</div>
+<div style="display:flex;gap:10px;">
+<div class="live-indicator">
+    <span class="ping"></span>
+    Live Attendance
+</div>
+<a href="{{ url_for('classrep_percentage_page') }}" class="logout-btn" style="background:#7c3aed;">Percentage</a>
+<a href="/logout" class="logout-btn">Logout</a>
+</div>
+</section>
+
+<section class="filters">
+<div class="controls">
+
+<label class="control">
+Status
+<select id="statusFilter">
+<option value="all">All Status</option>
+{% for status in status_options %}
+<option value="{{ status }}">{{ status }}</option>
+{% endfor %}
+</select>
+</label>
+
+<label class="control">
+Date
+<input id="dateFilter" type="date">
+</label>
+
+<label class="control">
+Period
+<select id="periodFilter">
+{% for period in period_options %}
+<option value="{{ period }}">Period {{ period }}</option>
+{% endfor %}
+</select>
+</label>
+
+<label class="control">
+Search
+<input id="searchFilter" type="text" placeholder="Search any field...">
+</label>
+
+<div class="control-actions">
+<button id="updateAllBtn" type="button">Update All</button>
+<button id="markAllPresentBtn" type="button">Mark All Present</button>
+<button id="copyPrevBtn" type="button">Use Previous Period</button>
+</div>
+
+</div>
+</section>
+
+<section class="table-card">
+<table id="attendanceTable">
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+
+{% if attendances and attendances|length > 0 %}
+{% for row in attendances %}
+<tr data-student="{{ row.get('Name','') }}" data-status="{{ row.get('status','') }}"
+data-original-status="{{ row.get('status','') }}" data-id="{{ row.get('Id','') }}"
+data-date="{{ row.get('date', row.get('Date','')) }}" data-period="{{ row.get('period',1) }}">
+
+<td>{{ row.get('Id','') }}</td>
+<td>{{ row.get('Name','') }}</td>
+<td>
+<select class="statusSelect">
+{% for status in status_options %}
+<option value="{{ status }}" {% if row.get('status','')==status %}selected{% endif %}>{{ status }}</option>
+{% endfor %}
+</select>
+</td>
+</tr>
+{% endfor %}
+{% else %}
+<tr>
+<td class="empty" colspan="3">No attendance records found.</td>
+</tr>
+{% endif %}
+
+</tbody>
+</table>
+</section>
+
+</div>
+
+
+	<!-- KEEP YOUR ORIGINAL JS BELOW -->
+
 
 	<script>
 		const statusFilter = document.getElementById("statusFilter");
@@ -793,6 +676,21 @@
 		dateFilter.addEventListener("change", refreshAttendanceForSelection);
 		dateFilter.addEventListener("change", () => updateSaturdayOptionVisibility(false));
 		periodFilter.addEventListener("change", refreshAttendanceForSelection);
-	</script>
+	</script><script>
+function toggleTheme(){
+    document.body.classList.toggle("light");
+    localStorage.setItem("theme",
+        document.body.classList.contains("light") ? "light":"dark"
+    );
+}
+
+window.onload = function(){
+    if(localStorage.getItem("theme")==="light"){
+        document.body.classList.add("light");
+    }
+}
+</script>
+
 </body>
+
 </html>

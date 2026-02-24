@@ -1,130 +1,65 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Select Login - Attendance Portal</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
-	<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/logo.png') }}">
+	<title>Select Login</title>
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 	<style>
-		:root {
-			--ink: #e6edf6;
-			--muted: #9fb0c1;
-			--surface: rgba(12, 18, 26, 0.75);
-			--accent: #f0a64b;
-			--accent-strong: #e57a4c;
-			--teal: #2aa39b;
-			--teal-strong: #17837d;
-			--line: rgba(255, 255, 255, 0.08);
-			--shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
-		}
-		* { box-sizing: border-box; }
 		body {
-			font-family: "Rubik", "Space Grotesk", sans-serif;
-			color: var(--ink);
 			margin: 0;
-			min-height: 100vh;
-			background:
-				radial-gradient(circle at 10% 20%, rgba(240, 166, 75, 0.16), transparent 55%),
-				radial-gradient(circle at 90% 10%, rgba(42, 163, 155, 0.16), transparent 50%),
-				linear-gradient(135deg, #05070b 0%, #0b1118 45%, #101a24 100%);
-			padding: 28px 18px 60px;
+			font-family: Poppins, sans-serif;
+			background: linear-gradient(135deg, #0f172a, #1e3a8a);
 			display: flex;
-			align-items: center;
 			justify-content: center;
-		}
-		.shell { max-width: 600px; width: 100%; }
-		.navbar {
-			display: flex;
-			justify-content: flex-end;
-			margin-bottom: 12px;
-		}
-		.nav-link {
-			text-decoration: none;
-			color: var(--ink);
-			background: var(--surface);
-			border: 1px solid var(--line);
-			padding: 8px 14px;
-			border-radius: 10px;
-			font-weight: 600;
-		}
-		.hero, .card {
-			background: var(--surface);
-			border: 1px solid var(--line);
-			box-shadow: var(--shadow);
-			backdrop-filter: blur(16px);
-			-webkit-backdrop-filter: blur(16px);
-		}
-		.hero {
-			border-radius: 22px;
-			padding: 26px;
-			display: flex;
-			flex-direction: column;
 			align-items: center;
-			gap: 20px;
-			text-align: center;
-			margin-bottom: 22px;
-		}
-		.hero img {
-			width: 80px;
-			height: 80px;
-			border-radius: 18px;
-			object-fit: contain;
-			background: rgba(255, 255, 255, 0.08);
-			padding: 12px;
-		}
-		.hero h1 { margin: 0; font-size: 1.3rem; font-weight: 700; }
-		.hero p { margin: 8px 0 0; font-size: 0.95rem; color: var(--muted); }
-		.card { border-radius: 20px; padding: 26px; }
-		.card h2 { margin: 0 0 20px; font-size: 1.2rem; text-align: center; }
-		.button-group { display: flex; flex-direction: column; gap: 12px; }
-		.btn {
-			padding: 14px 20px;
-			border: none;
-			border-radius: 14px;
-			font-size: 1rem;
-			font-weight: 600;
-			text-decoration: none;
-			display: inline-block;
-			text-align: center;
+			min-height: 100vh;
 			color: #fff;
 		}
-		.btn-hod {
-			background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-			box-shadow: 0 12px 26px rgba(244, 160, 58, 0.25);
+
+		.card {
+			padding: 40px;
+			background: rgba(255, 255, 255, 0.08);
+			backdrop-filter: blur(18px);
+			border-radius: 18px;
+			border: 1px solid rgba(255, 255, 255, 0.18);
+			text-align: center;
 		}
-		.btn-classrep {
-			background: linear-gradient(135deg, var(--teal) 0%, var(--teal-strong) 100%);
-			box-shadow: 0 12px 26px rgba(31, 138, 132, 0.25);
-		}
-		.btn-principal {
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-			box-shadow: 0 12px 26px rgba(102, 126, 234, 0.25);
+
+		a {
+			display: block;
+			margin: 12px 0;
+			padding: 12px;
+			background: #6366f1;
+			color: #fff;
+			text-decoration: none;
+			border-radius: 12px;
+			font-weight: 600;
 		}
 	</style>
 </head>
+
 <body>
-	<div class="shell">
-		<nav class="navbar">
-			<a href="{{ url_for('index') }}" class="nav-link">Home</a>
-		</nav>
-		<section class="hero">
-			<img src="{{ url_for('static', filename='/images/logo.png') }}" alt="Logo">
-			<div>
-				<h1>P.T. LEE CHENGALVARAYA NAICKER<br>COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
-				<p>Attendance Management System</p>
-			</div>
-		</section>
-		<section class="card">
-			<h2>Choose Login Role</h2>
-			<div class="button-group">
-				<a href="{{ url_for('login_hod_page') }}" class="btn btn-hod">Login as HOD</a>
-				<a href="{{ url_for('login_classrep_page') }}" class="btn btn-classrep">Login as Class Rep</a>
-				<a href="{{ url_for('login_principal_page') }}" class="btn btn-principal">Login as Principal</a>
-			</div>
-		</section>
+	<div class="card">
+		<h2>Select Login Role</h2>
+		<a href="{{ url_for('login_hod_page') }}">Login as HOD</a>
+		<a href="{{ url_for('login_classrep_page') }}">Login as Class Rep</a>
+		<a href="{{ url_for('login_principal_page') }}">Login as Principal</a>
 	</div>
+
+	<script>
+		function toggleTheme() {
+			document.body.classList.toggle("light");
+			localStorage.setItem("theme",
+				document.body.classList.contains("light") ? "light" : "dark"
+			);
+		}
+
+		window.onload = function () {
+			if (localStorage.getItem("theme") === "light") {
+				document.body.classList.add("light");
+			}
+		}
+	</script>
 </body>
+
 </html>

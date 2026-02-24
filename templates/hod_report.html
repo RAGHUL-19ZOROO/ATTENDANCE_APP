@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Attendance Percentage</title>
+<script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+	<style>
+		body {
+			margin: 0;
+			font-family: Poppins, sans-serif;
+			background: linear-gradient(135deg, #0f172a, #1e3a8a);
+			color: #fff;
+			min-height: 100vh;
+			padding: 40px;
+		}
+
+		.card {
+			background: rgba(255, 255, 255, 0.08);
+			backdrop-filter: blur(18px);
+			border: 1px solid rgba(255, 255, 255, 0.18);
+			border-radius: 18px;
+			padding: 25px;
+			max-width: 1100px;
+			margin: auto;
+		}
+
+		input {
+			padding: 10px;
+			border-radius: 10px;
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			background: rgba(255, 255, 255, 0.1);
+			color: #fff;
+		}
+
+		button {
+			padding: 10px 16px;
+			border: none;
+			border-radius: 10px;
+			background: #6366f1;
+			color: #fff;
+			font-weight: 600;
+			margin-right: 8px;
+			cursor: pointer;
+		}
+
+		button:hover {
+			opacity: 0.85;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: 20px;
+		}
+
+		th,
+		td {
+			padding: 12px;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+		}
+
+		th {
+			text-transform: uppercase;
+			font-size: 12px;
+		}
+
+		.note {
+			margin-top: 15px;
+			color: #cbd5f5;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="card">
+
+		<h2>Attendance Percentage</h2>
+
+		From: <input type="date" id="fromDate">
+		To: <input type="date" id="toDate">
+		<button id="calcPercentageBtn">Calculate</button>
+
+		<div id="percentageMeta" class="note"></div>
+		<div id="percentageOutput"></div>
+
+		<div style="margin-top:15px;">
+			<button id="exportCsvBtn">CSV</button>
+			<button id="exportExcelBtn">Excel</button>
+			<button id="exportPdfBtn">PDF</button>
+		</div>
+
+	</div>
+	<script>
+		const REPORT_HEADER = {
+			collegeName: "P.T. LEE CHENGALVARAYA NAICKER COLLEGE OF ENGINEERING & TECHNOLOGY",
+			address: "Kanchipuram, Tamil Nadu - 631502",
+			dept: "AI & DS - 2nd Year",
+			logo: "/static/images/logo.png"
+		};
+	</script>
+
+	<script>
+		const fromDate = document.getElementById("fromDate");
+		const toDate = document.getElementById("toDate");
+		const calcPercentageBtn = document.getElementById("calcPercentageBtn");
+		const exportCsvBtn = document.getElementById("exportCsvBtn");
+		const exportExcelBtn = document.getElementById("exportExcelBtn");
+		const exportPdfBtn = document.getElementById("exportPdfBtn");
+		const percentageOutput = document.getElementById("percentageOutput");
+		const percentageMeta = document.getElementById("percentageMeta");
+
+		let latestPercentageRows = [];
+		let latestPercentageFromDate = "";
+		let latestPercentageToDate = "";
+
+		const todayStr = new Date().toISOString().slice(0, 10);
+		fromDate.value = todayStr;
+		toDate.value = todayStr;
+
+		function renderPercentageRows(rowsData) {
+			if (!rowsData || rowsData.length === 0) {
+				percentageOutput.innerHTML = "<p class='note'>No records found for the selected range.</p>";
+				return;
+			}
+
+			const html = `
+    <table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Present Hours</th>
+        <th>Total Hours</th>
+        <th>Percentage</th>
+    </tr>
+    </thead>
+    <tbody>
+    ${rowsData.map(row => `
+        <tr>
+            <td>${row.Id ?? ""}</td>
+            <td>${row.Name ?? ""}</td>
+            <td>${row.present_hours ?? 0}</td>
+            <td>${row.total_hours ?? 0}</td>
+            <td>${row.percentage ?? 0}%</td>
+        </tr>
+    `).join("")}
+    </tbody>
+    </table>`;
+			percentageOutput.innerHTML = html;
+		}
+
+		async function calculateRangePercentage() {
+			const selectedFromDate = fromDate.value.trim();
+			const selectedToDate = toDate.value.trim() || todayStr;
+
+			if (!selectedFromDate) {
+				alert("Please select From Date.");
+				return;
+			}
+
+			const response = await fetch("/attendance/percentage-range", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					from_date: selectedFromDate,
+					to_date: selectedToDate
+				})
+			});
+
+			const result = await response.json().catch(() => ({}));
+			if (!response.ok || !result.ok) {
+				alert(result.message || "Failed to calculate percentage.");
+				return;
+			}
+
+			percentageMeta.textContent = `Range: ${result.from_date} to ${result.to_date}`;
+			latestPercentageRows = result.rows || [];
+			latestPercentageFromDate = result.from_date;
+			latestPercentageToDate = result.to_date;
+
+			renderPercentageRows(latestPercentageRows);
+		}
+
+		/* ================= EXPORT FUNCTIONS ================= */
+
+		function ensureExportReady() {
+			if (!latestPercentageRows.length) {
+				alert("Please calculate percentage first.");
+				return false;
+			}
+			return true;
+		}
+
+		/* CSV EXPORT */
+		function exportAsCsv() {
+			if (!ensureExportReady()) return;
+
+			let lines = [];
+
+			lines.push(REPORT_HEADER.collegeName);
+			lines.push(REPORT_HEADER.address);
+			lines.push("Attendance Report");
+			lines.push("Department: " + REPORT_HEADER.dept);
+			lines.push("Range: " + latestPercentageFromDate + " to " + latestPercentageToDate);
+			lines.push("");
+
+			lines.push("ID,Name,Present Hours,Total Hours,Percentage");
+
+			latestPercentageRows.forEach(row => {
+				lines.push(`${row.Id},${row.Name},${row.present_hours},${row.total_hours},${row.percentage}%`);
+			});
+
+			downloadFile(lines.join("\n"), "attendance_report.csv", "text/csv");
+		}
+		/* EXCEL EXPORT */
+		function exportAsExcel() {
+			if (!ensureExportReady()) return;
+
+			let table = `
+    <table border="0">
+    <tr>
+        <td colspan="5" align="center">
+            <img src="${REPORT_HEADER.logo}" width="60"><br>
+            <b>${REPORT_HEADER.collegeName}</b><br>
+            ${REPORT_HEADER.address}<br><br>
+            <b>Attendance Report</b><br>
+            ${REPORT_HEADER.dept}<br>
+            Range: ${latestPercentageFromDate} to ${latestPercentageToDate}
+        </td>
+    </tr>
+    </table>
+
+    <br>
+
+    <table border="1">
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Present Hours</th>
+        <th>Total Hours</th>
+        <th>Percentage</th>
+    </tr>
+    ${latestPercentageRows.map(row => `
+        <tr>
+            <td>${row.Id}</td>
+            <td>${row.Name}</td>
+            <td>${row.present_hours}</td>
+            <td>${row.total_hours}</td>
+            <td>${row.percentage}%</td>
+        </tr>
+    `).join("")}
+    </table>
+    `;
+
+			downloadFile(table, "attendance_report.xls", "application/vnd.ms-excel");
+		}
+
+		/* PDF EXPORT */
+		function exportAsPdf() {
+			if (!ensureExportReady()) return;
+
+			const win = window.open("", "", "width=900,height=700");
+
+			const rows = latestPercentageRows.map(row => `
+        <tr>
+            <td>${row.Id}</td>
+            <td>${row.Name}</td>
+            <td>${row.present_hours}</td>
+            <td>${row.total_hours}</td>
+            <td>${row.percentage}%</td>
+        </tr>
+    `).join("");
+
+			win.document.write(`
+    <html>
+    <head>
+    <title>Attendance Report</title>
+    <style>
+    body{font-family:Arial;padding:20px;text-align:center;}
+    table{width:100%;border-collapse:collapse;margin-top:20px;}
+    th,td{border:1px solid #ccc;padding:8px;}
+    th{background:#f2f2f2;}
+    </style>
+    </head>
+    <body>
+
+    <img src="${REPORT_HEADER.logo}" width="70"><br>
+    <h2>${REPORT_HEADER.collegeName}</h2>
+    <div>${REPORT_HEADER.address}</div>
+    <h3>Attendance Report</h3>
+    <div>${REPORT_HEADER.dept}</div>
+    <div>Range: ${latestPercentageFromDate} to ${latestPercentageToDate}</div>
+
+    <table>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Present Hours</th>
+        <th>Total Hours</th>
+        <th>Percentage</th>
+    </tr>
+    ${rows}
+    </table>
+
+    </body>
+    </html>
+    `);
+
+			win.document.close();
+			win.print();
+		}
+
+		/* FILE DOWNLOAD HELPER */
+		function downloadFile(content, filename, type) {
+			const blob = new Blob([content], { type: type });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		}
+
+		/* ================= BUTTON EVENTS ================= */
+
+		calcPercentageBtn.addEventListener("click", calculateRangePercentage);
+
+		exportCsvBtn.addEventListener("click", () => {
+			if (ensureExportReady()) exportAsCsv();
+		});
+
+		exportExcelBtn.addEventListener("click", () => {
+			if (ensureExportReady()) exportAsExcel();
+		});
+
+		exportPdfBtn.addEventListener("click", () => {
+			if (ensureExportReady()) exportAsPdf();
+		});
+	</script>
+
+</body>
+
+</html>

@@ -1135,6 +1135,14 @@ def filter_by_hours():
         "min_days_required": min_days,
         "total_meeting_requirement": len(filtered_students)
     })
+@app.route("/hod-report")
+def hod_report_page():
+    rows = attendance_percentage_range()  # use your existing function
+    return render_template(
+        "hod_report.html",
+        rows=rows,
+        selected_date=request.args.get("date")
+    )
 
 #testing only use run_waitress
 if __name__=="__main__":

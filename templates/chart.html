@@ -1,179 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Attendance Chart</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/logo.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='images/logo.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/logo.png') }}">
-    <style>
-        :root {
-            --ink: #e6edf6;
-            --muted: #9fb0c1;
-            --surface: rgba(12, 18, 26, 0.75);
-            --accent: #f0a64b;
-            --accent-strong: #e57a4c;
-            --teal: #2aa39b;
-            --teal-strong: #17837d;
-            --line: rgba(255, 255, 255, 0.08);
-            --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
-        }
-        * {
-            box-sizing: border-box;
-        }
-        body {
-            font-family: "Rubik", "Space Grotesk", sans-serif;
-            color: var(--ink);
-            margin: 0;
-            min-height: 100vh;
-            padding: 28px 18px 60px;
-            background:
-                radial-gradient(circle at 10% 20%, rgba(240, 166, 75, 0.16), transparent 55%),
-                radial-gradient(circle at 90% 10%, rgba(42, 163, 155, 0.16), transparent 50%),
-                linear-gradient(135deg, #05070b 0%, #0b1118 45%, #101a24 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 900px;
-            background: var(--surface);
-            padding: 30px;
-            border-radius: 18px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--line);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-        }
-        h1 {
-            color: var(--ink);
-            text-align: center;
-            margin-top: 0;
-        }
-        .form-group {
-            margin: 20px 0;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--muted);
-        }
-        .date-range {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 14px;
-        }
-        select, button {
-            width: 100%;
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid var(--line);
-            border-radius: 10px;
-        }
-        select, input[type="date"] {
-            background: rgba(11, 17, 24, 0.9);
-            color: var(--ink);
-        }
-        button {
-            background: linear-gradient(135deg, var(--teal) 0%, var(--teal-strong) 100%);
-            color: #ffffff;
-            cursor: pointer;
-            margin-top: 10px;
-            font-weight: 600;
-            border: none;
-        }
-        button:hover {
-            opacity: 0.95;
-        }
-        #chartContainer {
-            margin-top: 30px;
-            text-align: center;
-        }
-        #chartImage {
-            max-width: 100%;
-            height: auto;
-            border: 1px solid var(--line);
-            border-radius: 10px;
-        }
-        .stats {
-            margin-top: 20px;
-            text-align: center;
-        }
-        .stats div {
-            display: inline-block;
-            margin: 0 15px;
-            padding: 10px 20px;
-            border-radius: 8px;
-        }
-        .back-link {
-            display: block;
-            text-align: center;
-            margin-top: 20px;
-            color: var(--accent);
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .back-link:hover {
-            text-decoration: underline;
-        }
-        @media (max-width: 768px) {
-            .container {
-                padding: 22px;
-            }
-            body {
-                padding: 20px 14px 40px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>📊 Student Attendance Chart</h1>
-        
-        <div class="form-group">
-            <label for="studentSelect">Select Student:</label>
-            <select id="studentSelect">
-                <option value="">-- Choose a Student --</option>
-                {% for student in students %}
-                <option value="{{ student.Id }}">{{ student.Id }} - {{ student.Name }}</option>
-                {% endfor %}
-            </select>
-        </div>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Attendance Chart</title>
 
-        <div class="form-group date-range">
-            <div>
-                <label for="fromDate">From Date:</label>
-                <input type="date" id="fromDate">
-            </div>
-            <div>
-                <label for="toDate">To Date:</label>
-                <input type="date" id="toDate">
-            </div>
-        </div>
-        
-        <button onclick="loadChart()">Generate Chart</button>
-        
-        <div id="chartContainer" style="display: none;">
-            <h2 id="studentName"></h2>
-            <img id="chartImage" src="" alt="Attendance Chart">
-            <div class="stats" id="stats"></div>
-        </div>
-        
-        <a href="{{ url_for('dashboard') }}" class="back-link">← Back to Dashboard</a>
-    </div>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+body{
+    margin:0;
+    font-family:Poppins,sans-serif;
+    background:linear-gradient(135deg,#0f172a,#1e3a8a);
+    color:#fff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+.container{
+    width:95%;
+    max-width:900px;
+    padding:30px;
+    border-radius:18px;
+    background:rgba(255,255,255,0.08);
+    backdrop-filter:blur(18px);
+    border:1px solid rgba(255,255,255,0.18);
+}
+
+h1{text-align:center;margin-top:0;}
+
+label{display:block;margin-bottom:6px;}
+
+input,select{
+    width:100%;
+    padding:10px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,0.2);
+    background:rgba(255,255,255,0.1);
+    color:#000000;
+}
+
+button{
+    margin-top:15px;
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:12px;
+    background:#6366f1;
+    color:#fff;
+    font-weight:600;
+}
+
+#chartContainer{
+    margin-top:20px;
+    text-align:center;
+}
+
+#chartImage{
+    max-width:100%;
+    border-radius:12px;
+    margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>📊 Student Attendance Chart</h1>
+
+<label>Select Student</label>
+<select id="studentSelect">
+<option value="">-- Choose a Student --</option>
+{% for student in students %}
+<option value="{{ student.Id }}">{{ student.Id }} - {{ student.Name }}</option>
+{% endfor %}
+</select>
+
+<label style="margin-top:15px;">From Date</label>
+<input type="date" id="fromDate">
+
+<label style="margin-top:15px;">To Date</label>
+<input type="date" id="toDate">
+
+<button onclick="loadChart()">Generate Chart</button>
+
+<div id="chartContainer" style="display:none;">
+<h2 id="studentName"></h2>
+<img id="chartImage" src="">
+<div id="stats"></div>
+</div>
+
+<a href="{{ url_for('dashboard') }}" style="color:#c7d2fe;display:block;margin-top:20px;text-align:center;">← Back</a>
+
+</div>
+
+
+
 
     <script>
         function loadChart() {
             const studentId = document.getElementById('studentSelect').value;
             const fromDate = document.getElementById('fromDate').value;
             const toDate = document.getElementById('toDate').value;
-            
+
             if (!studentId) {
                 alert('Please select a student');
                 return;
@@ -188,7 +120,7 @@
                 alert('From Date cannot be greater than To Date');
                 return;
             }
-            
+
             const query = `from_date=${encodeURIComponent(fromDate)}&to_date=${encodeURIComponent(toDate)}`;
 
             fetch(`/attendance/chart/${studentId}?${query}`)
@@ -197,7 +129,7 @@
                     if (data.ok) {
                         document.getElementById('studentName').textContent = `${data.student_name} (${data.from_date} to ${data.to_date})`;
                         document.getElementById('chartImage').src = data.chart_url + '?t=' + new Date().getTime();
-                        
+
                         const statsHtml = `
                             <div style="background-color: #4CAF50; color: white;">
                                 Present: ${data.stats.present}
@@ -221,5 +153,20 @@
                 });
         }
     </script>
+    <script>
+function toggleTheme(){
+    document.body.classList.toggle("light");
+    localStorage.setItem("theme",
+        document.body.classList.contains("light") ? "light":"dark"
+    );
+}
+
+window.onload = function(){
+    if(localStorage.getItem("theme")==="light"){
+        document.body.classList.add("light");
+    }
+}
+</script>
 </body>
+
 </html>
