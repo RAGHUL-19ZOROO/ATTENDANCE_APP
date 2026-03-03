@@ -14,6 +14,23 @@ import matplotlib.pyplot as plt
 bp = Blueprint('attendance', __name__)
 
 
+def _consume_approved_unlock_request(student_id, attendance_date, period):
+    return unlock_requests_collection.find_one_and_update(
+        {
+            "student_id": student_id,
+            "date": attendance_date,
+            "period": period,
+            "status": "approved"
+        },
+        {
+            "$set": {
+                "status": "consumed",
+                "consumed": datetime.now(),
+            }
+        }
+    )
+
+
 @bp.route('/attendance/update', methods=['POST'])
 @class_rep_required
 def update_attendance():
@@ -51,12 +68,7 @@ def update_attendance():
 
     # If exists and no approved unlock → block
     if existing:
-        approved = unlock_requests_collection.find_one({
-            "student_id": student_id,
-            "date": attendance_date,
-            "period": period,
-            "status": "approved"
-        })
+        approved = _consume_approved_unlock_request(student_id, attendance_date, period)
         if not approved:
             return jsonify({'ok': False, 'message': 'This period is locked.'}), 403
 
@@ -159,6 +171,23 @@ def update_attendance_bulk():
             continue
 
         attendance_date = datetime.strptime(date_text, '%Y-%m-%d')
+
+        existing = attendances_collection.find_one({
+            "Id": student_id,
+            "attendance": {
+                "$elemMatch": {
+                    "date": attendance_date,
+                    "period": period
+                }
+            }
+        })
+
+        if existing:
+            approved = _consume_approved_unlock_request(student_id, attendance_date, period)
+            if not approved:
+                errors.append({'id': student_id, 'message': 'This period is locked.'})
+                continue
+
         match = _attendance_match(attendance_date, period)
 
         result = attendances_collection.update_one(

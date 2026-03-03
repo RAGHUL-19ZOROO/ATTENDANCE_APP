@@ -518,6 +518,34 @@ if(dateFilter){
                 });
             }
 		}
+
+		function lockRowForNewRequest(row) {
+			row.dataset.locked = 'true';
+			row.dataset.unlockRequested = 'false';
+			row.classList.add('locked');
+
+			const statusSelect = row.querySelector('.statusSelect');
+			const remarksSelect = row.querySelector('.remarksSelect');
+			if (statusSelect) {
+				statusSelect.disabled = true;
+				statusSelect.title = 'Locked due to previous absence/remark.';
+			}
+			if (remarksSelect) {
+				remarksSelect.disabled = true;
+				remarksSelect.title = 'Locked due to previous absence/remark.';
+			}
+
+			const actionCell = row.cells[4];
+			if (actionCell) {
+				actionCell.innerHTML = '';
+				const unlockBtn = document.createElement('button');
+				unlockBtn.className = 'unlockBtn';
+				unlockBtn.type = 'button';
+				unlockBtn.innerText = 'Request Unlock';
+				unlockBtn.addEventListener('click', () => handleUnlock(row));
+				actionCell.appendChild(unlockBtn);
+			}
+		}
 		function rebuildTable(rowsData) {
             // ensure filters updated when rebuilding
 			tableBody.innerHTML = "";
@@ -622,12 +650,14 @@ async function handleUnlock(row) {
     if (!confirm("This entry is locked due to earlier absence or remark. Send unlock request to HOD?")) {
         return;
     }
-    let newStatus = prompt("Enter the desired status (present/absent/late):", "present");
-    if (!newStatus || !['present','absent','late'].includes(newStatus)) {
-        alert('Invalid status, request cancelled.');
-        return;
-    }
-    let newRemarks = prompt("Enter remarks (optional):", "");
+
+	const choice = await askUnlockOptions();
+	if (!choice) {
+		return;
+	}
+
+	const newStatus = choice.status;
+	const newRemarks = choice.remarks;
 
     try {
         const response = await fetch("/classrep/unlock-request", {
@@ -638,16 +668,72 @@ async function handleUnlock(row) {
         const data = await response.json();
         alert(data.message || (data.ok ? "Request submitted." : "Failed."));
         if (data.ok) {
-            const btn = row.querySelector('.unlockBtn');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerText = 'Requested';
-            }
+			            row.dataset.unlockRequested = 'true';
+			            const btn = row.querySelector('.unlockBtn');
+			            if (btn) {
+			                btn.disabled = true;
+			                btn.innerText = 'Requested';
+			            }
         }
     } catch (err) {
         console.error(err);
         alert('Failed to send unlock request.');
     }
+}
+
+function askUnlockOptions() {
+	return new Promise((resolve) => {
+		const wrapper = document.createElement('div');
+		wrapper.innerHTML = `
+			<div id="unlockOptionOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;">
+				<div style="background:#1f2937;color:#fff;padding:16px;border-radius:10px;min-width:280px;max-width:90vw;">
+					<h3 style="margin:0 0 12px 0;font-size:16px;">Unlock Request Options</h3>
+					<label style="display:block;margin-bottom:6px;">Desired Status</label>
+					<select id="unlockStatusSelect" style="width:100%;padding:8px;margin-bottom:12px;">
+						<option value="present">Present</option>
+						<option value="absent">Absent</option>
+						<option value="late">Late</option>
+					</select>
+					<label style="display:block;margin-bottom:6px;">Remarks</label>
+					<select id="unlockRemarksSelect" style="width:100%;padding:8px;margin-bottom:14px;">
+						<option value="">None</option>
+						<option value="informed">Informed</option>
+						<option value="on duty">On duty</option>
+					</select>
+					<div style="display:flex;gap:8px;justify-content:flex-end;">
+						<button id="unlockOptCancel" type="button" style="padding:7px 12px;">Cancel</button>
+						<button id="unlockOptSubmit" type="button" style="padding:7px 12px;">Submit Request</button>
+					</div>
+				</div>
+			</div>
+		`;
+
+		const overlay = wrapper.firstElementChild;
+		document.body.appendChild(overlay);
+
+		const statusEl = document.getElementById('unlockStatusSelect');
+		const remarksEl = document.getElementById('unlockRemarksSelect');
+		const cancelBtn = document.getElementById('unlockOptCancel');
+		const submitBtn = document.getElementById('unlockOptSubmit');
+
+		const cleanup = () => {
+			if (overlay && overlay.parentNode) {
+				overlay.parentNode.removeChild(overlay);
+			}
+		};
+
+		cancelBtn.addEventListener('click', () => {
+			cleanup();
+			resolve(null);
+		});
+
+		submitBtn.addEventListener('click', () => {
+			const status = statusEl ? statusEl.value : 'present';
+			const remarks = remarksEl ? remarksEl.value : '';
+			cleanup();
+			resolve({ status, remarks });
+		});
+	});
 }
 
 async function updateAllStatuses() {
@@ -701,6 +787,7 @@ async function updateAllStatuses() {
 						item.row.dataset.remarks = item.remarks;
 						item.row.dataset.originalRemarks = item.remarks;
 					}
+					lockRowForNewRequest(item.row);
 				});
 				applyFilters();
 				alert("Statuses updated successfully.");
@@ -741,6 +828,9 @@ async function updateAllStatuses() {
 								row.dataset.status = "present";
 								row.dataset.originalStatus = "present";
 							}
+							row.dataset.remarks = "";
+							row.dataset.originalRemarks = "";
+							lockRowForNewRequest(row);
 						}
 					});
 					applyFilters();
