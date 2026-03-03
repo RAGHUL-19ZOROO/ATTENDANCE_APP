@@ -174,12 +174,34 @@ def process_unlock():
         {'$set': {'status': new_status}}
     )
 
-    # 🔥 IF APPROVED → REMOVE CONTINUOUS ABSENCE AFTER THIS PERIOD
+    # 🔥 IF APPROVED → UPDATE ATTENDANCE STATUS AND REMOVE CONTINUOUS ABSENCE AFTER THIS PERIOD
     if new_status == 'approved':
 
         student_id = req_doc.get('student_id')
         attendance_date = req_doc.get('date')
         period = req_doc.get('period')
+        requested_status = req_doc.get('requested_status')
+        requested_remarks = req_doc.get('requested_remarks', '')
+
+        # Update the attendance entry with the requested status and remarks, and unlock it
+        attendances_collection.update_one(
+            {
+                "Id": student_id,
+                "attendance": {
+                    "$elemMatch": {
+                        "date": attendance_date,
+                        "period": period
+                    }
+                }
+            },
+            {
+                "$set": {
+                    "attendance.$.status": requested_status,
+                    "attendance.$.remarks": requested_remarks,
+                    "attendance.$.locked": False
+                }
+            }
+        )
 
         # Remove auto-marked future absences (if any)
         attendances_collection.update_many(
