@@ -88,10 +88,10 @@ th,td{
 <div class="sidebar">
     <h2>LEE ATTENDANCE</h2>
 
-    <a href="{{ url_for('hod_dashboard') }}">Dashboard</a>
-    <a href="{{ url_for('hod_report_page') }}">Reports</a>
-    <a href="{{ url_for('chart_page') }}">Charts</a>
-    <a href="{{ url_for('logout') }}">Logout</a>
+    <a href="{{ url_for('hod.hod_dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('hod.hod_report_page') }}">Reports</a>
+    <a href="{{ url_for('attendance.chart_page') }}">Charts</a>
+    <a href="{{ url_for('auth.logout') }}">Logout</a>
 </div>
 
 <!-- MAIN -->
@@ -141,6 +141,7 @@ Date:
 </tr>
 
 {% for r in rows %}
+{% if r.total and r.total > 0 %}
 <tr>
 <td>{{ r.Id }}</td>
 <td>{{ r.Name }}</td>
@@ -148,6 +149,7 @@ Date:
 <td>{{ r.absent }}</td>
 <td>{{ r.percentage }}%</td>
 </tr>
+{% endif %}
 {% endfor %}
 
 </table>

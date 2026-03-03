@@ -40,8 +40,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            background-color: #000000;
             background: linear-gradient(var(--bg-overlay), var(--bg-overlay)),
-            url("{{ url_for('static', filename='images/gate.jpeg') }}");
+            url("{{ url_for('static', filename='images/gate 3.jpg') }}");
             background-size: cover;
             background-position: center;
             transition: 0.4s;
@@ -132,7 +133,7 @@
             text-decoration: none;
             font-weight: 600;
             text-align: center;
-            color: #fff;
+            color: #000000;
         }
 
         .btn-hod {
@@ -156,8 +157,8 @@
     <div class="shell">
 
         <section class="hero">
-            <img src="{{ url_for('static', filename='images/logo.png') }}">
-            <h1>P.T. LEE CHENGALVARAYA NAICKER<br>COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
+            <!-- <img src="{{ url_for('static', filename='images/logo.png') }}"> -->
+            <h1>AGRRICULTURE INSTITUTION</h1>
             <p>Attendance Management System</p>
             <div class="hero-tag">Smart Campus</div>
         </section>
@@ -166,9 +167,9 @@
             <h2>Select Login Role</h2>
 
             <div class="button-group">
-                <a href="{{ url_for('login_hod_page') }}" class="btn btn-hod">Login as HOD</a>
-                <a href="{{ url_for('login_classrep_page') }}" class="btn btn-class">Login as Class Rep</a>
-                <a href="{{ url_for('login_principal_page') }}" class="btn btn-principal">Login as Principal</a>
+                <a href="{{ url_for('auth.login_hod_page') }}" class="btn btn-hod">Login as HOD</a>
+                <a href="{{ url_for('auth.login_classrep_page') }}" class="btn btn-class">Login as STAFF</a>
+                <a href="{{ url_for('auth.login_principal_page') }}" class="btn btn-principal"> PRINCIPAL </a>
             </div>
 
         </section>

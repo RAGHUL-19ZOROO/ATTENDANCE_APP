@@ -187,7 +187,7 @@
 				<p>Set semester boundaries used in attendance percentage and result calculations.</p>
 			</div>
 			<div class="actions">
-				<a class="btn btn-logout" href="{{ url_for('logout') }}">Logout</a>
+				<a class="btn btn-logout" href="{{ url_for('auth.logout') }}">Logout</a>
 			</div>
 			<button onclick="toggleTheme()" class="theme-btn">🌙</button>
 		</section>
@@ -200,7 +200,7 @@
 			<div class="message message-error">{{ error }}</div>
 			{% endif %}
 
-			<form method="POST" action="{{ url_for('principal_settings_page') }}">
+			<form method="POST" action="{{ url_for('principal.principal_settings_page') }}">
 				<div class="controls">
 					<label>
 						Semester Start Date

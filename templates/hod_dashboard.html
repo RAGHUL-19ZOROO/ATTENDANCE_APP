@@ -161,10 +161,10 @@ li{
 <div class="sidebar">
     <h2>LEE ATTENDANCE</h2>
 
-    <a href="{{ url_for('hod_dashboard') }}">Dashboard</a>
-    <a href="{{ url_for('hod_report_page') }}">Reports</a>
-    <a href="{{ url_for('chart_page') }}">Charts</a>
-    <a href="{{ url_for('logout') }}">Logout</a>
+    <a href="{{ url_for('hod.hod_dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('hod.hod_report_page') }}">Reports</a>
+    <a href="{{ url_for('attendance.chart_page') }}">Charts</a>
+    <a href="{{ url_for('auth.logout') }}">Logout</a>
 </div>
 
 <!-- MAIN -->
@@ -176,6 +176,11 @@ li{
     <span class="ping"></span>
     Live Attendance
 </div>
+</div>
+
+<div style="margin-left:40px;margin-top:8px;display:flex;gap:12px;align-items:center;">
+    <button id="refreshLiveBtn" style="padding:8px 12px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-weight:600;cursor:pointer;">Refresh</button>
+    <div style="color:#cbd5f5;font-size:13px;">Last updated: <span id="lastUpdated">Never</span></div>
 </div>
 
 <div class="grid">
@@ -205,15 +210,15 @@ li{
 <div class="card">
 <h3>Today's Absentees</h3>
 
+<ul id="todayAbsenteesList">
 {% if today_absentees %}
-<ul>
 {% for s in today_absentees %}
-<li>{{ s.Name }} ({{ s.Id }})</li>
+<li>{{ s.Name }} ({{ s.Id }}){% if s.status %} — <strong>{{ s.status|capitalize }}</strong>{% endif %}</li>
 {% endfor %}
-</ul>
 {% else %}
-<p>All students present today</p>
+<li>All students present today</li>
 {% endif %}
+</ul>
 
 </div>
 
@@ -231,6 +236,31 @@ li{
 <p>No long absentees</p>
 {% endif %}
 
+</div>
+
+<!-- UNLOCK REQUESTS -->
+<div class="card" id="unlockRequestsCard">
+<h3>Unlock Requests</h3>
+<ul id="unlockRequestsList">
+{% if unlock_requests %}
+    {% for r in unlock_requests %}
+        <li data-request-id="{{ r.request_id }}">
+            {{ r.student_name or 'Student' }} ({{ r.student_id }}) - {{ r.date }} Period {{ r.period }}
+            {% if r.requested_status %}
+                &nbsp;<strong>wants {{ r.requested_status }}</strong>
+            {% endif %}
+            {% if r.requested_remarks %}
+                &nbsp;[{{ r.requested_remarks }}]
+            {% endif %}
+            <br><small>asked at {{ r.created }}</small>
+            <button class="approveBtn" style="margin-left:8px;">Approve</button>
+            <button class="rejectBtn" style="margin-left:4px;">Reject</button>
+        </li>
+    {% endfor %}
+{% else %}
+    <li>No pending requests</li>
+{% endif %}
+</ul>
 </div>
 
 </div>
@@ -267,14 +297,113 @@ async function updateLiveDashboard(){
     }else{
         data.today_absentees.forEach(s=>{
             const li = document.createElement("li");
-            li.innerText = s.Name + " (" + s.Id + ")";
+            let text = s.Name + " (" + s.Id + ")";
+            if(s.status){
+                text += " — " + (s.status.charAt(0).toUpperCase() + s.status.slice(1));
+            }
+            li.innerText = text;
             list.appendChild(li);
         });
     }
 }
 
+function setLastUpdatedNow(){
+    const el = document.getElementById('lastUpdated');
+    if(el){ el.innerText = new Date().toLocaleString(); }
+}
+
 /* refresh every 5 seconds */
 setInterval(updateLiveDashboard, 5000);
+
+// manual refresh
+const refreshBtn = document.getElementById('refreshLiveBtn');
+if(refreshBtn){ refreshBtn.addEventListener('click', () => { updateLiveDashboard(); setLastUpdatedNow(); }); }
+
+// SSE real-time updates
+if(typeof(EventSource) !== 'undefined'){
+    try{
+        const es = new EventSource('/hod/stream');
+        es.onmessage = function(e){
+            // on any server event, refresh data and update timestamp
+            updateLiveDashboard();
+            setLastUpdatedNow();
+            // if an unlock request came in or was processed, refresh list
+            try{
+                const payload = JSON.parse(e.data);
+                if(payload.type && (payload.type === 'unlock_request' || payload.type.startsWith('unlock_'))){
+                    refreshUnlockRequests();
+                }
+            }catch(err){}
+        };
+    }catch(err){
+        console.warn('SSE connection failed', err);
+    }
+}
+
+async function refreshUnlockRequests(){
+    const listEl = document.getElementById('unlockRequestsList');
+    if(!listEl) return;
+    try{
+        const res = await fetch('/hod/unlock-requests-data');
+        const data = await res.json();
+        if(!data.ok) return;
+        listEl.innerHTML = '';
+        if(data.requests.length === 0){
+            listEl.innerHTML = '<li>No pending requests</li>';
+            return;
+        }
+        data.requests.forEach(r=>{
+            const li = document.createElement('li');
+            li.dataset.requestId = r.request_id;
+            let content = `${r.student_name || 'Student'} (${r.student_id}) - ${r.date} Period ${r.period}`;
+            if(r.requested_status){
+                content += ` \u00A0[want ${r.requested_status}]`;
+            }
+            if(r.requested_remarks){
+                content += ` \u00A0(${r.requested_remarks})`;
+            }
+            content += `<br><small>asked at ${r.created}</small>`;
+            li.innerHTML = content;
+            const approve = document.createElement('button');
+            approve.className = 'approveBtn';
+            approve.style.marginLeft = '8px';
+            approve.innerText = 'Approve';
+            approve.addEventListener('click', () => handleRequestAction(r.request_id, 'approve'));
+            const reject = document.createElement('button');
+            reject.className = 'rejectBtn';
+            reject.style.marginLeft = '4px';
+            reject.innerText = 'Reject';
+            reject.addEventListener('click', () => handleRequestAction(r.request_id, 'reject'));
+            li.appendChild(approve);
+            li.appendChild(reject);
+            listEl.appendChild(li);
+        });
+    }catch(err){
+        console.error('Failed to refresh unlock requests', err);
+    }
+}
+
+async function handleRequestAction(requestId, action){
+    try{
+        const res = await fetch('/hod/process-unlock', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({request_id: requestId, action})
+        });
+        const data = await res.json();
+        if(data.ok){
+            refreshUnlockRequests();
+        } else {
+            alert(data.message || 'Failed to process request');
+        }
+    }catch(err){
+        console.error(err);
+        alert('Error processing request');
+    }
+}
+
+// initial load of requests
+refreshUnlockRequests();
 </script>
 </body>
 </html>

@@ -145,8 +145,8 @@ input,select{
     padding:10px;
     border-radius:10px;
     border:1px solid var(--border);
-    background:rgba(255,255,255,0.08);
-    color:#fff;
+    background:rgba(187, 183, 183, 0.329);
+    color:#000000;
 }
 
 /* BUTTONS */
@@ -169,6 +169,14 @@ button{
 #updateAllBtn{background:var(--primary);}
 #markAllPresentBtn{background:var(--success);}
 #copyPrevBtn{background:var(--purple);}
+
+.unlockBtn{
+    background:#fbbf24;
+    color:#000;
+    padding:6px 10px;
+    font-size:12px;
+    border-radius:6px;
+}
 
 /* ===== TABLE ===== */
 table{
@@ -198,6 +206,9 @@ tr:hover{
     background:rgba(255,255,255,0.1);
     color:#fff;
 }
+/* locked class no longer dims row to avoid old theme lock appearance */
+.locked { cursor: not-allowed; }
+
 
 .empty{
     text-align:center;
@@ -220,9 +231,9 @@ tr:hover{
 
 <section class="hero">
 <div class="hero-left">
-<img src="{{ url_for('static', filename='/images/logo.png') }}">
+<!-- <img src="{{ url_for('static', filename='/images/logo.png') }}"> -->
 <div>
-<h1>P.T. LEE CHENGALVARAYA NAICKER<br>COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
+<h1>AGRICULTURE INSTITUTION</h1>
 <p>Attendance Dashboard</p>
 </div>
 </div>
@@ -232,13 +243,16 @@ tr:hover{
     <span class="ping"></span>
     Live Attendance
 </div>
-<a href="{{ url_for('classrep_percentage_page') }}" class="logout-btn" style="background:#7c3aed;">Percentage</a>
-<a href="/logout" class="logout-btn">Logout</a>
+<a href="{{ url_for('classrep.classrep_percentage_page') }}" class="logout-btn" style="background:#7c3aed;">Percentage</a>
+<a href="{{ url_for('auth.logout') }}" class="logout-btn">Logout</a>
 </div>
 </section>
 
 <section class="filters">
 <div class="controls">
+<p style="font-size:13px;color:#cbd5f5;margin-bottom:8px;">
+    <em>Note: when a date is initialized for the first time, all students are marked <strong>present</strong> by default.</em>
+</p>
 
 <label class="control">
 Status
@@ -273,6 +287,7 @@ Search
 <button id="updateAllBtn" type="button">Update All</button>
 <button id="markAllPresentBtn" type="button">Mark All Present</button>
 <button id="copyPrevBtn" type="button">Use Previous Period</button>
+<button id="chatUnlockBtn" type="button" style="background:#f59e0b;">Chat Unlock</button>
 </div>
 
 </div>
@@ -285,6 +300,8 @@ Search
 <th>ID</th>
 <th>Name</th>
 <th>Status</th>
+<th>Remarks</th>
+<th>Action</th>
 </tr>
 </thead>
 <tbody>
@@ -292,23 +309,41 @@ Search
 {% if attendances and attendances|length > 0 %}
 {% for row in attendances %}
 <tr data-student="{{ row.get('Name','') }}" data-status="{{ row.get('status','') }}"
-data-original-status="{{ row.get('status','') }}" data-id="{{ row.get('Id','') }}"
-data-date="{{ row.get('date', row.get('Date','')) }}" data-period="{{ row.get('period',1) }}">
+ data-original-status="{{ row.get('status','') }}" data-remarks="{{ row.get('remarks','') }}" data-locked="{{ 'true' if row.get('locked') else 'false' }}" data-unlock-requested="{{ 'true' if row.get('unlock_requested') else 'false' }}" data-id="{{ row.get('Id','') }}"
+ data-date="{{ row.get('date', row.get('Date','')) }}" data-period="{{ row.get('period',1) }}">
 
 <td>{{ row.get('Id','') }}</td>
 <td>{{ row.get('Name','') }}</td>
 <td>
-<select class="statusSelect">
+<select class="statusSelect" {% if row.get('locked') %}disabled{% endif %}>
 {% for status in status_options %}
 <option value="{{ status }}" {% if row.get('status','')==status %}selected{% endif %}>{{ status }}</option>
 {% endfor %}
 </select>
 </td>
+<td>
+<select class="remarksSelect" {% if row.get('locked') %}disabled{% endif %}>
+<option value="">None</option>
+<option value="informed" {% if row.get('remarks','')=='informed' %}selected{% endif %}>Informed</option>
+<option value="on duty" {% if row.get('remarks','')=='on duty' %}selected{% endif %}>On duty</option>
+</select>
+</td>
+<td>
+{% if row.get('locked') %}
+    {% if row.get('unlock_requested') %}
+        <button class="unlockBtn" type="button" disabled>Requested</button>
+    {% else %}
+        <button class="unlockBtn" type="button" data-id="{{ row.get('Id','') }}" data-date="{{ row.get('date', row.get('Date','')) }}" data-period="{{ row.get('period',1) }}">Request Unlock</button>
+    {% endif %}
+{% else %}
+&nbsp;
+{% endif %}
+</td>
 </tr>
 {% endfor %}
 {% else %}
 <tr>
-<td class="empty" colspan="3">No attendance records found.</td>
+<td class="empty" colspan="5">No attendance records found.</td>
 </tr>
 {% endif %}
 
@@ -342,8 +377,29 @@ data-date="{{ row.get('date', row.get('Date','')) }}" data-period="{{ row.get('p
 		const yesterday = new Date();
 		yesterday.setDate(yesterday.getDate() - 1);
 		const yesterdayStr = yesterday.toISOString().slice(0, 10);
+		// inform user about default behavior when they change the date
+		function showDefaultPresentNotice() {
+		    const noteId = 'defaultPresentNotice';
+		    if (!document.getElementById(noteId)) {
+		        const note = document.createElement('div');
+		        note.id = noteId;
+		        note.style.fontSize = '13px';
+		        note.style.color = '#cbd5f5';
+		        note.style.marginTop = '4px';
+		        note.innerHTML = '<em>New dates default to present when initialized.</em>';
+		        dateFilter.parentElement.appendChild(note);
+		    }
+		}
 
 		dateFilter.value = todayStr;
+// show initial notice
+showDefaultPresentNotice();
+// notify when user picks another date
+if(dateFilter){
+    dateFilter.addEventListener('change', () => {
+        showDefaultPresentNotice();
+    });
+}
 
 		function isUpdatable(dateStr) {
 			return dateStr <= todayStr;
@@ -372,6 +428,36 @@ data-date="{{ row.get('date', row.get('Date','')) }}" data-period="{{ row.get('p
 			}
 		}
 
+		// SSE support for class rep so approvals unlock rows automatically
+		if(typeof(EventSource) !== 'undefined'){
+		    try{
+		        const es = new EventSource('/classrep/stream');
+		        es.onmessage = function(e){
+		            try{
+		                const payload = JSON.parse(e.data);
+		                if(payload.type === 'unlock_approved'){
+		                    rows.forEach(row=>{
+		                        const sid = row.dataset.id;
+		                        const dt = row.dataset.date;
+		                        const pr = row.dataset.period;
+		                        if(sid == payload.student_id && dt == payload.date && pr == String(payload.period)){
+		                            row.dataset.locked = 'false';
+		                            row.dataset.unlockRequested = 'false';
+		                            const statusSelect = row.querySelector('.statusSelect');
+		                            const remarksSelect = row.querySelector('.remarksSelect');
+		                            if(statusSelect){ statusSelect.disabled = false; statusSelect.title=""; }
+		                            if(remarksSelect){ remarksSelect.disabled = false; remarksSelect.title=""; }
+		                            const btn = row.querySelector('.unlockBtn');
+		                            if(btn){ btn.disabled = true; btn.innerText=''; }
+		                            row.classList.remove('locked');
+		                        }
+		                    });
+		                }
+		            }catch(err){/*ignore*/}
+		        };
+		    }catch(err){console.warn('SSE connection failed', err);}
+		}
+
 		function applyFilters() {
 			const selectedStatus = statusFilter.value.toLowerCase();
 			const dateText = dateFilter.value.trim();
@@ -398,22 +484,42 @@ data-date="{{ row.get('date', row.get('Date','')) }}" data-period="{{ row.get('p
 
 		function bindRowEvents(row) {
 			const statusSelect = row.querySelector(".statusSelect");
-			if (!statusSelect) {
-				return;
-			}
-			const rowDate = row.dataset.date || "";
-			if (!isUpdatable(rowDate)) {
-				statusSelect.disabled = true;
-				statusSelect.title = "Updates allowed only for current date and past dates.";
-				row.classList.add("locked");
-			}
-			statusSelect.addEventListener("change", (event) => {
-				row.dataset.status = event.target.value;
-				applyFilters();
-			});
+            const remarksSelect = row.querySelector(".remarksSelect");
+            if (!statusSelect) {
+                return;
+            }
+            const rowDate = row.dataset.date || "";
+            const unlockBtn = row.querySelector('.unlockBtn');
+            if (!isUpdatable(rowDate) || row.dataset.locked === 'true') {
+                statusSelect.disabled = true;
+                statusSelect.title = "Updates not allowed.";
+                if(remarksSelect){ remarksSelect.disabled = true; remarksSelect.title = "Updates not allowed."; }
+                row.classList.add("locked");
+                if(unlockBtn){
+                    unlockBtn.addEventListener('click', () => handleUnlock(row));
+                }
+            }
+            statusSelect.addEventListener("change", (event) => {
+                row.dataset.status = event.target.value;
+                applyFilters();
+            });
+            if(remarksSelect){
+                remarksSelect.addEventListener("change", (event) => {
+                    row.dataset.remarks = event.target.value;
+                    // adjust status automatically
+                    if(event.target.value === 'informed'){
+                        statusSelect.value = 'absent';
+                        row.dataset.status = 'absent';
+                    } else if(event.target.value === 'on duty'){
+                        statusSelect.value = 'present';
+                        row.dataset.status = 'present';
+                    }
+                    applyFilters();
+                });
+            }
 		}
-
 		function rebuildTable(rowsData) {
+            // ensure filters updated when rebuilding
 			tableBody.innerHTML = "";
 			if (!rowsData.length) {
 				const emptyRow = document.createElement("tr");
@@ -424,58 +530,146 @@ data-date="{{ row.get('date', row.get('Date','')) }}" data-period="{{ row.get('p
 			}
 
 			rowsData.forEach((rowData) => {
-				const row = document.createElement("tr");
-				row.dataset.student = rowData.Name || "";
-				row.dataset.status = rowData.status || "";
-				row.dataset.originalStatus = rowData.status || "";
-				row.dataset.id = rowData.Id || "";
-				row.dataset.date = rowData.date || "";
-				row.dataset.period = rowData.period || "";
+                const row = document.createElement("tr");
+                row.dataset.student = rowData.Name || "";
+                row.dataset.status = rowData.status || "";
+                row.dataset.originalStatus = rowData.status || "";
+                row.dataset.remarks = rowData.remarks || "";
+                row.dataset.locked = rowData.locked ? 'true' : 'false';
+                row.dataset.unlockRequested = rowData.unlock_requested ? 'true' : 'false';
+                // mark row as locked if either condition holds
+                if(row.dataset.unlockRequested === 'true'){
+                    row.dataset.locked = 'true';
+                }
+                row.dataset.id = rowData.Id || "";
+                row.dataset.date = rowData.date || "";
+                row.dataset.period = rowData.period || "";
 
-				const statusOptions = `
-					{% for status in status_options %}
-					<option value="{{ status }}">{{ status }}</option>
-					{% endfor %}
-				`;
+                const statusOptions = `
+                    {% for status in status_options %}
+                    <option value="{{ status }}">{{ status }}</option>
+                    {% endfor %}
+                `;
+                const remarksOptions = `
+                    <option value="">None</option>
+                    <option value="informed">Informed</option>
+                    <option value="on duty">On duty</option>
+                `;
 
-				row.innerHTML = `
-					<td>${rowData.Id ?? ""}</td>
-					<td>${rowData.Name ?? ""}</td>
-					<td>
-						<select class="statusSelect">
-							${statusOptions}
-						</select>
-					</td>
-				`;
+                let actionCell = "";
+                if (rowData.locked) {
+                    if (rowData.unlock_requested) {
+                        actionCell = `<td><button class="unlockBtn" disabled>Requested</button></td>`;
+                    } else {
+                        actionCell = `<td><button class="unlockBtn" type="button" data-id="${rowData.Id}" data-date="${rowData.date}" data-period="${rowData.period}">Request Unlock</button></td>`;
+                    }
+                } else {
+                    actionCell = `<td>&nbsp;</td>`;
+                }
 
-				const statusSelect = row.querySelector(".statusSelect");
-				statusSelect.value = rowData.status || "present";
-				tableBody.appendChild(row);
-				bindRowEvents(row);
-			});
+                row.innerHTML = `
+                    <td>${rowData.Id ?? ""}</td>
+                    <td>${rowData.Name ?? ""}</td>
+                    <td><select class="statusSelect">${statusOptions}</select></td>
+                    <td><select class="remarksSelect">${remarksOptions}</select></td>
+                    ${actionCell}
+                `;
 
+                const statusSelect = row.querySelector(".statusSelect");
+                const remarksSelect = row.querySelector(".remarksSelect");
+                statusSelect.value = rowData.status || "present";
+                remarksSelect.value = rowData.remarks || "";
+                if (rowData.locked) {
+                    statusSelect.disabled = true;
+                    remarksSelect.disabled = true;
+                    row.classList.add('locked');
+                    statusSelect.title = remarksSelect.title = "Locked due to previous absence/remark.";
+                }
+                tableBody.appendChild(row);
+                bindRowEvents(row);
+            });
 			rows = Array.from(tableBody.querySelectorAll("tr"));
 		}
 
-		async function updateAllStatuses() {
+		async function chatUnlock(){
+    // simple prompt-based chat bot for unlock requests
+    const reg = prompt("Enter student registration number:");
+    if(!reg) return;
+    let date = prompt("Enter date (YYYY-MM-DD) or leave blank for today:");
+    if(!date){ const d = new Date(); date = d.toISOString().slice(0,10); }
+    let period = prompt("Enter period number (1-8):");
+    if(!period) return;
+    if(isNaN(period)) period = 1;
+    try{
+        const res = await fetch('/classrep/unlock-request', {
+            method:'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id:reg, date, period})
+        });
+        const data = await res.json();
+        alert(data.message || (data.ok? 'Request sent':'Failed'));
+    }catch(err){
+        console.error(err);
+        alert('Error sending request');
+    }
+}
+
+async function handleUnlock(row) {
+    const id = row.dataset.id;
+    const date = row.dataset.date;
+    const period = row.dataset.period;
+    // ask user for the new status and optional remarks
+    if (!confirm("This entry is locked due to earlier absence or remark. Send unlock request to HOD?")) {
+        return;
+    }
+    let newStatus = prompt("Enter the desired status (present/absent/late):", "present");
+    if (!newStatus || !['present','absent','late'].includes(newStatus)) {
+        alert('Invalid status, request cancelled.');
+        return;
+    }
+    let newRemarks = prompt("Enter remarks (optional):", "");
+
+    try {
+        const response = await fetch("/classrep/unlock-request", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({id, date, period, requested_status: newStatus, requested_remarks: newRemarks}),
+        });
+        const data = await response.json();
+        alert(data.message || (data.ok ? "Request submitted." : "Failed."));
+        if (data.ok) {
+            const btn = row.querySelector('.unlockBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = 'Requested';
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Failed to send unlock request.');
+    }
+}
+
+async function updateAllStatuses() {
 			const pending = rows
 				.filter((row) => !row.querySelector(".empty"))
 				.map((row) => {
 					const statusSelect = row.querySelector(".statusSelect");
+					const remarksSelect = row.querySelector(".remarksSelect");
 					return {
 						row,
 						id: row.dataset.id,
 						date: row.dataset.date || "",
 						period: row.dataset.period || "",
 						status: statusSelect ? statusSelect.value : "",
+						remarks: remarksSelect ? remarksSelect.value : "",
 						originalStatus: row.dataset.originalStatus || "",
-						updatable: isUpdatable(row.dataset.date || ""),
+						originalRemarks: row.dataset.remarks || "",
+						updatable: isUpdatable(row.dataset.date || "") && row.dataset.locked !== 'true',
 					};
 				});
-
-			const updates = pending
-				.filter((item) => item.status && item.status !== item.originalStatus)
-				.filter((item) => item.updatable);
+		const updates = pending
+				.filter((item) => item.updatable && ((item.status && item.status !== item.originalStatus) || (item.remarks !== item.originalRemarks)))
 
 			if (updates.length === 0) {
 				alert("No changes to update.");
@@ -493,6 +687,7 @@ data-date="{{ row.get('date', row.get('Date','')) }}" data-period="{{ row.get('p
 						date: item.date,
 						period: item.period,
 						status: item.status,
+						remarks: item.remarks || "",
 					})),
 				}),
 			});
@@ -502,6 +697,10 @@ data-date="{{ row.get('date', row.get('Date','')) }}" data-period="{{ row.get('p
 				updates.forEach((item) => {
 					item.row.dataset.status = item.status;
 					item.row.dataset.originalStatus = item.status;
+					if(item.remarks !== undefined){
+						item.row.dataset.remarks = item.remarks;
+						item.row.dataset.originalRemarks = item.remarks;
+					}
 				});
 				applyFilters();
 				alert("Statuses updated successfully.");
@@ -676,7 +875,8 @@ data-date="{{ row.get('date', row.get('Date','')) }}" data-period="{{ row.get('p
 		dateFilter.addEventListener("change", refreshAttendanceForSelection);
 		dateFilter.addEventListener("change", () => updateSaturdayOptionVisibility(false));
 		periodFilter.addEventListener("change", refreshAttendanceForSelection);
-	</script><script>
+	</script>
+<script>
 function toggleTheme(){
     document.body.classList.toggle("light");
     localStorage.setItem("theme",
@@ -692,5 +892,4 @@ window.onload = function(){
 </script>
 
 </body>
-
 </html>

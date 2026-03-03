@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+0<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -55,7 +55,6 @@ body{
 	border:1px solid var(--border);
 }
 
-/* HERO CARD */
 .hero{
 	background:var(--glass);
 	border-radius:24px;
@@ -164,12 +163,12 @@ body{
 <div class="shell">
 
 	<nav class="navbar">
-		<a href="{{ url_for('index') }}" class="nav-link">Home</a>
+		<a href="{{ url_for('auth.index') }}" class="nav-link">Home</a>
 	</nav>
 
 	<section class="hero">
-		<img src="{{ url_for('static', filename='/images/logo.png') }}">
-		<h1>P.T. LEE CHENGALVARAYA NAICKER<br>COLLEGE OF ENGINEERING & TECHNOLOGY</h1>
+		<!-- <img src="{{ url_for('static', filename='/images/logo.png') }}"> -->
+		<h1>AGRICULTURE INSTITUTION</h1>
 		<p>Attendance Management System</p>
 		<div class="hero-tag">Login</div>
 	</section>
@@ -177,7 +176,7 @@ body{
 	<section class="card">
 		<h2>{{ title or 'Login' }}</h2>
 
-		<form method="POST" action="{{ url_for('auth_login', role=role_key or 'hod') }}">
+		<form method="POST" action="{{ url_for('auth.auth_login', role=role_key or 'hod') }}">
 
 			<div class="form-group">
 				<label>Username</label>
@@ -201,7 +200,7 @@ body{
 		</div>
 
 		<div class="back-link">
-			<a href="{{ url_for('login_page') }}">Back to Role Selection</a>
+			<a href="{{ url_for('auth.login_page') }}">Back to Role Selection</a>
 		</div>
 
 	</section>
@@ -220,6 +219,7 @@ function toggleTheme(){
 window.onload = function(){
     if(localStorage.getItem("theme")==="light"){
         document.body.classList.add("light");
+		
     }
 }
 </script>
