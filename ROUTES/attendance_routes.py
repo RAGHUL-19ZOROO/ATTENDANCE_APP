@@ -56,18 +56,19 @@ def update_attendance():
     attendance_date = datetime.strptime(date_text, '%Y-%m-%d')
 
     # 🔒 LOCK CHECK
-    existing = attendances_collection.find_one({
+    locked_existing = attendances_collection.find_one({
         "Id": student_id,
         "attendance": {
             "$elemMatch": {
                 "date": attendance_date,
-                "period": period
+                "period": period,
+                "locked": True
             }
         }
     })
 
     # If exists and no approved unlock → block
-    if existing:
+    if locked_existing:
         approved = _consume_approved_unlock_request(student_id, attendance_date, period)
         if not approved:
             return jsonify({'ok': False, 'message': 'This period is locked.'}), 403
@@ -137,6 +138,7 @@ def update_attendance_bulk():
 
     errors = []
     updated = 0
+    successful_slots = set()
 
     for item in updates:
         student_id = item.get('id')
@@ -172,17 +174,18 @@ def update_attendance_bulk():
 
         attendance_date = datetime.strptime(date_text, '%Y-%m-%d')
 
-        existing = attendances_collection.find_one({
+        locked_existing = attendances_collection.find_one({
             "Id": student_id,
             "attendance": {
                 "$elemMatch": {
                     "date": attendance_date,
-                    "period": period
+                    "period": period,
+                    "locked": True
                 }
             }
         })
 
-        if existing:
+        if locked_existing:
             approved = _consume_approved_unlock_request(student_id, attendance_date, period)
             if not approved:
                 errors.append({'id': student_id, 'message': 'This period is locked.'})
@@ -205,6 +208,15 @@ def update_attendance_bulk():
                 continue
 
         updated += 1
+        successful_slots.add((attendance_date, period))
+
+    # Lock full saved slots so unchanged rows also require unlock.
+    for attendance_date, period in successful_slots:
+        match = _attendance_match(attendance_date, period)
+        attendances_collection.update_many(
+            {'attendance': {'$elemMatch': match}},
+            {'$set': {'attendance.$.locked': True, 'attendance.$.period': period}},
+        )
 
     # notify HOD clients (best-effort)
     try:
@@ -280,6 +292,22 @@ def mark_all_present():
 
     if not _is_update_allowed(date_text):
         return jsonify({'ok': False, 'message': 'Updates allowed only for current date and past dates.'}), 403
+
+    # Do not allow mark-all once this slot is locked.
+    any_locked = attendances_collection.find_one({
+        "attendance": {
+            "$elemMatch": {
+                "date": attendance_date,
+                "period": period,
+                "locked": True,
+            }
+        }
+    })
+    if any_locked:
+        return jsonify({
+            'ok': False,
+            'message': 'This slot is locked. Use unlock request workflow before editing.',
+        }), 403
 
     match = _attendance_match(attendance_date, period)
     attendances_collection.update_many(

@@ -309,7 +309,7 @@ Search
 {% if attendances and attendances|length > 0 %}
 {% for row in attendances %}
 <tr data-student="{{ row.get('Name','') }}" data-status="{{ row.get('status','') }}"
- data-original-status="{{ row.get('status','') }}" data-remarks="{{ row.get('remarks','') }}" data-locked="{{ 'true' if row.get('locked') else 'false' }}" data-unlock-requested="{{ 'true' if row.get('unlock_requested') else 'false' }}" data-id="{{ row.get('Id','') }}"
+ data-original-status="{{ row.get('status','') }}" data-remarks="{{ row.get('remarks','') }}" data-original-remarks="{{ row.get('remarks','') }}" data-locked="{{ 'true' if row.get('locked') else 'false' }}" data-unlock-requested="{{ 'true' if row.get('unlock_requested') else 'false' }}" data-id="{{ row.get('Id','') }}"
  data-date="{{ row.get('date', row.get('Date','')) }}" data-period="{{ row.get('period',1) }}">
 
 <td>{{ row.get('Id','') }}</td>
@@ -563,6 +563,7 @@ if(dateFilter){
                 row.dataset.status = rowData.status || "";
                 row.dataset.originalStatus = rowData.status || "";
                 row.dataset.remarks = rowData.remarks || "";
+                row.dataset.originalRemarks = rowData.remarks || "";
                 row.dataset.locked = rowData.locked ? 'true' : 'false';
                 row.dataset.unlockRequested = rowData.unlock_requested ? 'true' : 'false';
                 // mark row as locked if either condition holds
@@ -736,7 +737,9 @@ function askUnlockOptions() {
 	});
 }
 
-async function updateAllStatuses() {
+		async function updateAllStatuses() {
+			const selectedDate = dateFilter.value.trim();
+			const selectedPeriod = periodFilter.value.trim();
 			const pending = rows
 				.filter((row) => !row.querySelector(".empty"))
 				.map((row) => {
@@ -750,7 +753,7 @@ async function updateAllStatuses() {
 						status: statusSelect ? statusSelect.value : "",
 						remarks: remarksSelect ? remarksSelect.value : "",
 						originalStatus: row.dataset.originalStatus || "",
-						originalRemarks: row.dataset.remarks || "",
+						originalRemarks: row.dataset.originalRemarks || "",
 						updatable: isUpdatable(row.dataset.date || "") && row.dataset.locked !== 'true',
 					};
 				});
@@ -779,7 +782,7 @@ async function updateAllStatuses() {
 			});
 
 			const result = await response.json().catch(() => ({}));
-			if (response.ok && result.ok) {
+			if (response.ok && (result.ok || (result.updated || 0) > 0)) {
 				updates.forEach((item) => {
 					item.row.dataset.status = item.status;
 					item.row.dataset.originalStatus = item.status;
@@ -787,10 +790,22 @@ async function updateAllStatuses() {
 						item.row.dataset.remarks = item.remarks;
 						item.row.dataset.originalRemarks = item.remarks;
 					}
-					lockRowForNewRequest(item.row);
+				});
+				rows.forEach((row) => {
+					if (
+						!row.querySelector(".empty") &&
+						row.dataset.date === selectedDate &&
+						row.dataset.period === selectedPeriod
+					) {
+						lockRowForNewRequest(row);
+					}
 				});
 				applyFilters();
-				alert("Statuses updated successfully.");
+				if (result.errors && result.errors.length > 0) {
+					alert(`Updated ${result.updated || 0} rows. ${result.errors.length} rows failed.`);
+				} else {
+					alert("Statuses updated successfully.");
+				}
 				return;
 			}
 
@@ -803,6 +818,16 @@ async function updateAllStatuses() {
 			const selectedPeriod = periodFilter.value.trim();
 			if (!selectedDate) {
 				alert("Please select a date first.");
+				return;
+			}
+			const hasLockedRows = rows.some((row) =>
+				!row.querySelector(".empty") &&
+				row.dataset.date === selectedDate &&
+				row.dataset.period === selectedPeriod &&
+				row.dataset.locked === "true"
+			);
+			if (hasLockedRows) {
+				alert("This date/period is locked. Request unlock from HOD first.");
 				return;
 			}
 

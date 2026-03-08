@@ -414,17 +414,19 @@ def _build_hod_main_dashboard(date_text):
 
     total_students = attendances_collection.count_documents({})
 
-    # Check if Period 1 exists
-    period1_exists = attendances_collection.count_documents({
-        "attendance": {
-            "$elemMatch": {
-                "date": attendance_date,
-                "period": 1
-            }
-        }
-    })
+    # Determine the latest period that has any record for today.
+    live_period = 0
+    for doc in attendances_collection.find({}, {"_id": 0, "attendance": 1}):
+        for entry in doc.get("attendance", []):
+            if entry.get("date") != attendance_date:
+                continue
+            entry_period = _parse_period(entry.get("period", 1))
+            if entry_period is None:
+                continue
+            if entry_period > live_period:
+                live_period = entry_period
 
-    if period1_exists == 0:
+    if live_period == 0:
         return {
             "total_students": total_students,
             "present_today": 0,
@@ -441,15 +443,18 @@ def _build_hod_main_dashboard(date_text):
         student_id = doc.get("Id")
         name = doc.get("Name")
 
-        period1_status = None
+        live_period_status = None
 
         for entry in doc.get("attendance", []):
-            if entry.get("date") == attendance_date and entry.get("period") == 1:
-                period1_status = entry.get("status")
+            if entry.get("date") != attendance_date:
+                continue
+            entry_period = _parse_period(entry.get("period", 1))
+            if entry_period == live_period:
+                live_period_status = entry.get("status")
                 break
 
-        if period1_status:
-            if period1_status in ["present", "late"]:
+        if live_period_status:
+            if live_period_status in ["present", "late"]:
                 total_present_today += 1
             else:
                 today_absentees.append({
@@ -463,5 +468,5 @@ def _build_hod_main_dashboard(date_text):
         "absent_today": len(today_absentees),
         "today_absentees": today_absentees,
         "long_absentees": [],
-        "live_period": 1
+        "live_period": live_period
     }
